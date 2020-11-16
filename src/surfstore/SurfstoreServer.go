@@ -1,6 +1,8 @@
 package surfstore
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -13,21 +15,52 @@ type Server struct {
 }
 
 func (s *Server) GetFileInfoMap(succ *bool, serverFileInfoMap *map[string]FileMetaData) error {
-	panic("todo")
+	// panic("todo")
+	if *succ {
+		e := s.MetaStore.GetFileInfoMap(succ, serverFileInfoMap)
+		if e != nil {
+			errors.New("Cannot get map")
+		}
+		return nil
+	} else {
+		return errors.New("Cannot find file")
+	}
 }
 
 func (s *Server) UpdateFile(fileMetaData *FileMetaData, latestVersion *int) error {
-	panic("todo")
+	// panic("todo")
+	e := s.MetaStore.UpdateFile(fileMetaData, latestVersion)
+	if e != nil {
+		errors.New("Cannot update")
+	}
+	return nil
 }
 
 func (s *Server) GetBlock(blockHash string, blockData *Block) error {
-	panic("todo")
+	// panic("todo")
+	e := s.BlockStore.GetBlock(blockHash, blockData)
+	if e != nil {
+		errors.New("Cannot get block")
+	}
+	return nil
+}
 
 func (s *Server) PutBlock(blockData Block, succ *bool) error {
-	panic("todo")
+	// panic("todo")
+	e := s.BlockStore.PutBlock(blockData, succ)
+	if e != nil {
+		errors.New("Cannot put block")
+	}
+	return nil
+}
 
 func (s *Server) HasBlocks(blockHashesIn []string, blockHashesOut *[]string) error {
-	panic("todo")
+	// panic("todo")
+	e := s.BlockStore.HasBlocks(blockHashesIn, blockHashesOut)
+	if e != nil {
+		errors.New("Cannot get blocks")
+	}
+	return nil
 }
 
 // This line guarantees all method for surfstore are implemented
@@ -44,5 +77,19 @@ func NewSurfstoreServer() Server {
 }
 
 func ServeSurfstoreServer(hostAddr string, surfstoreServer Server) error {
-	panic("todo")
+	// panic("todo")
+	rpc.Register(&surfstoreServer)
+	rpc.HandleHTTP()
+
+	l, e := net.Listen("tcp", hostAddr)
+	if e != nil {
+		log.Fatal("listen error:", e)
+	}
+
+	go http.Serve(l, nil)
+
+	fmt.Print("Press enter key to end server")
+	fmt.Scanln()
+
+	return nil
 }
