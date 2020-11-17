@@ -2,6 +2,7 @@ package surfstore
 
 import (
 	"fmt"
+	"log"
 	"net/rpc"
 )
 
@@ -15,11 +16,39 @@ func (surfClient *RPCClient) GetBlock(blockHash string, block *Block) error {
 	// connect to the server
 	conn, e := rpc.DialHTTP("tcp", surfClient.ServerAddr)
 	if e != nil {
+		log.Println("GetBlock: Not connected")
 		return e
+	} else {
+		fmt.Println("connected for get block")
 	}
 
 	// perform the call
 	e = conn.Call("Server.GetBlock", blockHash, block)
+	if e != nil {
+		conn.Close()
+		fmt.Println("client fail to get block ")
+		return e
+	}
+
+	fmt.Println("--->block content:", block.BlockData)
+
+	// close the connection
+	return conn.Close()
+}
+
+func (surfClient *RPCClient) HasBlock(blockHash string, succ *bool) error {
+	// ==============> panic("todo")
+	// connect to the server
+	conn, e := rpc.DialHTTP("tcp", surfClient.ServerAddr)
+	if e != nil {
+		fmt.Println("Not connected")
+		return e
+	} else {
+		fmt.Println("connected for has block")
+	}
+	// perform the call
+	e = conn.Call("Server.HasBlock", blockHash, succ)
+
 	if e != nil {
 		conn.Close()
 		return e
@@ -32,7 +61,7 @@ func (surfClient *RPCClient) GetBlock(blockHash string, block *Block) error {
 func (surfClient *RPCClient) PutBlock(block Block, succ *bool) error {
 	// ==============> panic("todo")
 	// connect to the server
-	conn, e := rpc.DialHTTP("tcp", "localhost:"+surfClient.ServerAddr)
+	conn, e := rpc.DialHTTP("tcp", surfClient.ServerAddr)
 	if e != nil {
 		fmt.Println("Not connected")
 		return e
@@ -71,7 +100,7 @@ func (surfClient *RPCClient) HasBlocks(blockHashesIn []string, blockHashesOut *[
 func (surfClient *RPCClient) GetFileInfoMap(succ *bool, serverFileInfoMap *map[string]FileMetaData) error {
 	// ==============> panic("todo")
 	// connect to the server
-	conn, e := rpc.DialHTTP("tcp", "localhost:"+surfClient.ServerAddr)
+	conn, e := rpc.DialHTTP("tcp", surfClient.ServerAddr)
 	if e != nil {
 		fmt.Println("Not connected")
 		return e
@@ -93,7 +122,7 @@ func (surfClient *RPCClient) GetFileInfoMap(succ *bool, serverFileInfoMap *map[s
 func (surfClient *RPCClient) UpdateFile(fileMetaData *FileMetaData, latestVersion *int) error {
 	// ==============> panic("todo")
 	// connect to the server
-	conn, e := rpc.DialHTTP("tcp", "localhost:"+surfClient.ServerAddr)
+	conn, e := rpc.DialHTTP("tcp", surfClient.ServerAddr)
 	if e != nil {
 		fmt.Println("Not connected")
 		return e
@@ -117,7 +146,7 @@ var _ Surfstore = new(RPCClient)
 func NewSurfstoreRPCClient(hostPort, baseDir string, blockSize int) RPCClient {
 
 	return RPCClient{
-		ServerAddr: hostPort,
+		ServerAddr: "localhost:" + hostPort,
 		BaseDir:    baseDir,
 		BlockSize:  blockSize,
 	}

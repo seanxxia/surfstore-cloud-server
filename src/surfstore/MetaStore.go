@@ -29,11 +29,13 @@ func (m *MetaStore) UpdateFile(fileMetaData *FileMetaData, latestVersion *int) (
 			(m.FileMetaMap)[fn] = (*fileMetaData)
 			*latestVersion = fileMetaData.Version
 		} else if v_input < v_hash {
-			return errors.New("trying to update an older version")
+			err := errors.New("trying to update an older version")
+			return err
 		} else { // ==
 
 		}
 	} else {
+		fmt.Println("update from scratch")
 		m.FileMetaMap[fn] = (*fileMetaData)
 		*latestVersion = 1 // should be the first
 	}

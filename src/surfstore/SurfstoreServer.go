@@ -88,7 +88,7 @@ func ServeSurfstoreServer(hostAddr string, surfstoreServer Server) error {
 
 	go http.Serve(l, nil)
 
-	fmt.Print("Press enter key to end server")
+	fmt.Println("Press enter key to end server")
 	fmt.Scanln()
 
 	return nil
