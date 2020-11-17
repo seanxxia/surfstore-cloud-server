@@ -65,7 +65,6 @@ func ClientSync(client RPCClient) {
 	}
 	// iterate over all the local files
 	for _, f := range files {
-		// fmt.Println(f.Name())
 		if f.Name() == "index.txt" {
 			continue
 		}
@@ -82,19 +81,25 @@ func ClientSync(client RPCClient) {
 		totalPartsNum := uint64(math.Ceil(float64(fileSize) / float64(fileChunk)))
 
 		var blocks []string
-		for i := uint64(0); i < totalPartsNum; i++ {
 
+		// for empty file
+		if totalPartsNum == 0 {
+			// write to hash
+			partBuffer := make([]byte, 0)
+			hash := sha256.Sum256(partBuffer)
+			str := hex.EncodeToString(hash[:])
+			blocks = append(blocks, str)
+		}
+
+		for i := uint64(0); i < totalPartsNum; i++ {
 			partSize := int(math.Min(float64(fileChunk), float64(fileSize-int64(i*fileChunk))))
 			partBuffer := make([]byte, partSize)
-
 			file.Read(partBuffer)
 			// write to hash
 			hash := sha256.Sum256(partBuffer)
 			str := hex.EncodeToString(hash[:])
-			// fmt.Println(str)
 			blocks = append(blocks, str)
 		}
-		// fmt.Print(blocks)
 		localfiles[f.Name()] = blocks
 	}
 
@@ -144,7 +149,6 @@ func ClientSync(client RPCClient) {
 	// the idea is : not modify the server then download to local
 	downloadblockmap := make(map[string]Block)
 	// get server map
-	fmt.Println("Start getting Server info")
 	serverfilemap := make(map[string]FileMetaData)
 	var succ = true
 	gmerr := client.GetFileInfoMap(&succ, &serverfilemap)
@@ -152,10 +156,9 @@ func ClientSync(client RPCClient) {
 		errors.New("get map error")
 		log.Fatal("Cannot get map")
 	}
-	fmt.Println("get the current server map:", serverfilemap)
+
 	// working on existing files in server and local
 	for remotename, remotemeta := range serverfilemap {
-		fmt.Println("in server map:", remotename, remotemeta)
 		if localmeta, ok := idxMetaMap[remotename]; ok { // if server match local file
 			localversion := localmeta.Version
 			remoteversion := remotemeta.Version
@@ -250,7 +253,6 @@ func PrintMetaMap(metaMap map[string]FileMetaData) {
 }
 
 func uploadfile(client RPCClient, localname string, idxMetaMap *(map[string]*FileMetaData)) {
-	fmt.Println(">>>>>>>>>>uploading:", localname)
 	// divide into blocks
 	file, err := os.Open(filepath.Join(client.BaseDir, localname))
 	if err != nil {
@@ -263,13 +265,21 @@ func uploadfile(client RPCClient, localname string, idxMetaMap *(map[string]*Fil
 	totalPartsNum := uint64(math.Ceil(float64(fileSize) / float64(fileChunk)))
 	var blocklist []string
 
-	fmt.Println("start splitting file in ", totalPartsNum, " times")
 	// for empty file
 	if totalPartsNum == 0 {
-		fmt.Println("empty file to sha256")
 		partBuffer := make([]byte, 0)
 		hash := sha256.Sum256(partBuffer)
-		fmt.Println(hash)
+		str := hex.EncodeToString(hash[:])
+		blocklist = append(blocklist, str)
+		//put block
+		var block Block
+		block.BlockData = partBuffer
+		block.BlockSize = 0
+		var succ = new(bool)
+		pterr := client.PutBlock(block, succ)
+		if *succ == false || pterr != nil {
+			log.Println("Cannot put empty block to server")
+		}
 	}
 
 	for i := uint64(0); i < totalPartsNum; i++ {
@@ -319,11 +329,8 @@ func DownloadnUpdate(client RPCClient, downloadblockmap *map[string]Block, remot
 	for _, sha256 := range remotemeta.BlockHashList {
 		var block Block
 		block, ok := (*downloadblockmap)[sha256]
-		fmt.Println("getting block from file:", remotemeta.Filename)
 		if !ok {
-			fmt.Println("finding block:", sha256)
 			client.GetBlock(sha256, &block)
-			fmt.Println("getting block:", block.BlockData)
 			(*downloadblockmap)[sha256] = block
 		}
 		*blocks = append(*blocks, block)
@@ -365,6 +372,7 @@ func writeindexFile(client RPCClient, idxMetaMap *map[string](*FileMetaData)) {
 		n := meta.Filename
 		v := meta.Version
 		blist := meta.BlockHashList
+		fmt.Println("=======>", blist)
 
 		var line string
 		line = n + "," + strconv.Itoa(v) + ","
@@ -372,7 +380,6 @@ func writeindexFile(client RPCClient, idxMetaMap *map[string](*FileMetaData)) {
 			line = line + hash + " "
 		}
 		line = strings.TrimSpace(line)
-		fmt.Println("final output:" + line)
 		_, err := f.WriteString(line + "\n")
 		if err != nil {
 			log.Fatal(err)

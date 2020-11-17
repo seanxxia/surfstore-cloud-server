@@ -30,8 +30,6 @@ func (surfClient *RPCClient) GetBlock(blockHash string, block *Block) error {
 		return e
 	}
 
-	fmt.Println("--->block content:", block.BlockData)
-
 	// close the connection
 	return conn.Close()
 }
@@ -146,7 +144,7 @@ var _ Surfstore = new(RPCClient)
 func NewSurfstoreRPCClient(hostPort, baseDir string, blockSize int) RPCClient {
 
 	return RPCClient{
-		ServerAddr: "localhost:" + hostPort,
+		ServerAddr: hostPort,
 		BaseDir:    baseDir,
 		BlockSize:  blockSize,
 	}

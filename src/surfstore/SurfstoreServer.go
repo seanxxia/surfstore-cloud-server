@@ -2,7 +2,6 @@ package surfstore
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -86,10 +85,13 @@ func ServeSurfstoreServer(hostAddr string, surfstoreServer Server) error {
 		log.Fatal("listen error:", e)
 	}
 
-	go http.Serve(l, nil)
+	http.Serve(l, nil)
 
-	fmt.Println("Press enter key to end server")
-	fmt.Scanln()
+	// fmt.Println("Press enter key to end server")
+	// fmt.Scanln()
+	for {
+
+	}
 
 	return nil
 }

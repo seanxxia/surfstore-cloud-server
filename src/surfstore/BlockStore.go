@@ -16,7 +16,6 @@ func (bs *BlockStore) GetBlock(blockHash string, blockData *Block) error {
 	value, ok := bs.BlockMap[blockHash]
 	if ok {
 		*blockData = value
-		fmt.Println("=========>get block", value)
 		return nil
 	} else {
 		err := errors.New("block not found")
@@ -28,19 +27,9 @@ func (bs *BlockStore) GetBlock(blockHash string, blockData *Block) error {
 
 func (bs *BlockStore) PutBlock(block Block, succ *bool) error {
 	// panic("todo")
-	if block.BlockSize == 0 {
-		*succ = false
-		return errors.New("empty block")
-	}
-	fmt.Print("inside putblock:")
-	// h := sha256.Sum256(block.BlockData)
-	// bs.BlockMap[string(h[:])] = block
-
 	hash := sha256.Sum256(block.BlockData)
 	str := hex.EncodeToString(hash[:])
 	bs.BlockMap[str] = block
-
-	fmt.Println("hash->"+str, block.BlockData)
 	*succ = true
 	return nil
 }

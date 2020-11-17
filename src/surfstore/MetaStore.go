@@ -2,7 +2,6 @@ package surfstore
 
 import (
 	"errors"
-	"fmt"
 )
 
 type MetaStore struct {
@@ -19,7 +18,6 @@ func (m *MetaStore) GetFileInfoMap(_ignore *bool, serverFileInfoMap *map[string]
 
 func (m *MetaStore) UpdateFile(fileMetaData *FileMetaData, latestVersion *int) (err error) {
 	// panic("todo")
-	fmt.Println("start update server")
 	fn := fileMetaData.Filename
 	fmd, ok := m.FileMetaMap[fn]
 	if ok {
@@ -31,11 +29,8 @@ func (m *MetaStore) UpdateFile(fileMetaData *FileMetaData, latestVersion *int) (
 		} else if v_input < v_hash {
 			err := errors.New("trying to update an older version")
 			return err
-		} else { // ==
-
 		}
 	} else {
-		fmt.Println("update from scratch")
 		m.FileMetaMap[fn] = (*fileMetaData)
 		*latestVersion = 1 // should be the first
 	}
