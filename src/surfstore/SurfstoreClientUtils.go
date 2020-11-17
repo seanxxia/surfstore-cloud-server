@@ -154,9 +154,9 @@ func ClientSync(client RPCClient) {
 			del := (len(localblist) == 1) && (localblist[0] == "0")
 			if localversion > remoteversion { // modify and upload newest file to server
 
-				if !del {
+				if !del { //upload file
 					uploadfile(client, remotename, &idxMetaMap)
-				} else { // it may be a delete file
+				} else { // delete file from local
 					var tombmeta FileMetaData
 					tombmeta.Filename = remotename
 					tombmeta.Version = localversion
@@ -175,6 +175,14 @@ func ClientSync(client RPCClient) {
 					DownloadnUpdate(client, &downloadblockmap, &remotemeta, &idxMetaMap, &blocks)
 					// write
 					writeFile(client, remotemeta, blocks)
+				} else { // tomb file on server match local file: update the local map and delete the file from local
+					//update
+					var delmeta FileMetaData
+					delmeta.Filename = remotemeta.Filename
+					delmeta.Version = remotemeta.Version
+					delmeta.BlockHashList = remotemeta.BlockHashList
+					idxMetaMap[remotemeta.Filename] = &delmeta
+					os.Remove(filepath.Join(client.BaseDir, remotemeta.Filename))
 				}
 			}
 		} else { // server not find in local. If not tomb then download to local
@@ -305,7 +313,6 @@ func DownloadnUpdate(client RPCClient, downloadblockmap *map[string]Block, remot
 		*blocks = append(*blocks, block)
 	}
 	//update
-	// idxMetaMap := make(map[string]*FileMetaData)
 	var newmeta FileMetaData
 	newmeta.Filename = remotemeta.Filename
 	newmeta.Version = remotemeta.Version
