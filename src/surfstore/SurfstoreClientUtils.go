@@ -63,7 +63,7 @@ func ClientSync(client RPCClient) {
 	if err != nil {
 		errors.New("cannot read dir")
 	}
-	// iterate over all the files
+	// iterate over all the local files
 	for _, f := range files {
 		// fmt.Println(f.Name())
 		if f.Name() == "index.txt" {
@@ -97,6 +97,7 @@ func ClientSync(client RPCClient) {
 		// fmt.Print(blocks)
 		localfiles[f.Name()] = blocks
 	}
+
 	//iterate the old index map see if old file exists
 	for key, idxmeta := range idxMetaMap {
 		if localb, ok := localfiles[key]; ok { //find the existing file
@@ -112,12 +113,19 @@ func ClientSync(client RPCClient) {
 					idxMetaMap[key].Version = oriversion + 1
 				}
 			}
-			continue
+		} else { // not find file in dir then delete
+
+			// but it is already a delete file then not +1
+			del := (len((*idxmeta).BlockHashList) == 1) && ((*idxmeta).BlockHashList[0] == "0")
+
+			if !del {
+				tomb := []string{"0"}
+				idxMetaMap[key].Version = idxMetaMap[key].Version + 1
+				idxMetaMap[key].BlockHashList = tomb
+			}
+
 		}
-		// not find file in dir then delete
-		tomb := []string{"0"}
-		idxMetaMap[key].Version = idxMetaMap[key].Version + 1
-		idxMetaMap[key].BlockHashList = tomb
+
 	}
 
 	//iterate new files to add new
@@ -131,6 +139,7 @@ func ClientSync(client RPCClient) {
 		}
 	}
 	fmt.Println(idxMetaMap)
+
 	// ============================ Now idxMetaMap is updated; try to compare with server map===============
 	// the idea is : not modify the server then download to local
 	downloadblockmap := make(map[string]Block)
@@ -185,15 +194,22 @@ func ClientSync(client RPCClient) {
 					os.Remove(filepath.Join(client.BaseDir, remotemeta.Filename))
 				}
 			}
-		} else { // server not find in local. If not tomb then download to local
+		} else { // server file not find in local.
 			remoteblist := remotemeta.BlockHashList
 			tomb := (len(remoteblist) == 1) && (remoteblist[0] == "0")
-			if !tomb {
+			if !tomb { //If not tomb then download and update to local
 				// download and update
 				blocks := make([]Block, 0, len(remoteblist))
 				DownloadnUpdate(client, &downloadblockmap, &remotemeta, &idxMetaMap, &blocks)
 				// write
 				writeFile(client, remotemeta, blocks)
+			} else { //If tomb then only update to local
+				var delmeta FileMetaData
+				delmeta.Filename = remotemeta.Filename
+				delmeta.Version = remotemeta.Version
+				delmeta.BlockHashList = remotemeta.BlockHashList
+				idxMetaMap[remotemeta.Filename] = &delmeta
+				os.Remove(filepath.Join(client.BaseDir, remotemeta.Filename))
 			}
 
 		}
