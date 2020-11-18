@@ -22,130 +22,12 @@ func ClientSync(client RPCClient) {
 	// panic("todo")
 
 	// ================================== create a map for old index.txt===============================
-	idxMetaMap := make(map[string]*FileMetaData)
-
-	idx_file, err := os.Open(filepath.Join(client.BaseDir, "index.txt")) // For read access.
-
-	if err != nil { //not exist index
-		idx_file, _ = os.Create(filepath.Join(client.BaseDir, "index.txt"))
-	}
-	defer idx_file.Close()
-
-	//read index file
-	scanner := bufio.NewScanner(idx_file)
-	for scanner.Scan() {
-		// fmt.Println(scanner.Text())
-		s := strings.Split(scanner.Text(), ",")
-		if len(s) > 1 {
-
-			filename := s[0]
-			version, _ := strconv.Atoi(s[1])
-			blist := s[2]
-			bs := strings.Split(blist, " ")
-
-			var meta FileMetaData
-			meta.Filename = filename
-			meta.Version = version
-			meta.BlockHashList = bs
-			idxMetaMap[filename] = &meta
-		}
-
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
-	}
+	idxMetaMap := readIndexFile(client)
 
 	// =============================create map for local dir======================
+	idxMetaMap = updateFileMetaMapWithLocalFiles(client, idxMetaMap)
 
-	localfiles := make(map[string][]string)
-	// open directory
-	files, err := ioutil.ReadDir(client.BaseDir)
-	if err != nil {
-		errors.New("cannot read dir")
-	}
-	// iterate over all the local files
-	for _, f := range files {
-		if f.Name() == "index.txt" {
-			continue
-		}
-		//check if files modified
-		//version++
-		file, err := os.Open(filepath.Join(client.BaseDir, f.Name()))
-		if err != nil {
-			errors.New("cannot read file")
-		}
-		// divide into blocks
-		fileChunk := uint64(client.BlockSize)
-		fileInfo, _ := file.Stat()
-		var fileSize int64 = fileInfo.Size()
-		totalPartsNum := uint64(math.Ceil(float64(fileSize) / float64(fileChunk)))
-
-		var blocks []string
-
-		// for empty file
-		if totalPartsNum == 0 {
-			// write to hash
-			partBuffer := make([]byte, 0)
-			hash := sha256.Sum256(partBuffer)
-			str := hex.EncodeToString(hash[:])
-			blocks = append(blocks, str)
-		}
-
-		for i := uint64(0); i < totalPartsNum; i++ {
-			partSize := int(math.Min(float64(fileChunk), float64(fileSize-int64(i*fileChunk))))
-			partBuffer := make([]byte, partSize)
-			file.Read(partBuffer)
-			// write to hash
-			hash := sha256.Sum256(partBuffer)
-			str := hex.EncodeToString(hash[:])
-			blocks = append(blocks, str)
-		}
-		localfiles[f.Name()] = blocks
-	}
-
-	//iterate the old index map see if old file exists
-	for key, idxmeta := range idxMetaMap {
-		if localb, ok := localfiles[key]; ok { //find the existing file
-			if len(localb) != len((*idxmeta).BlockHashList) {
-				idxMetaMap[key].BlockHashList = localb
-				idxMetaMap[key].Version = idxMetaMap[key].Version + 1
-				continue
-			}
-			oriversion := (*idxmeta).Version
-			for i, b := range localb {
-				if b != idxmeta.BlockHashList[i] {
-					idxMetaMap[key].BlockHashList[i] = b
-					idxMetaMap[key].Version = oriversion + 1
-				}
-			}
-		} else { // not find file in dir then delete
-
-			// but it is already a delete file then not +1
-			del := (len((*idxmeta).BlockHashList) == 1) && ((*idxmeta).BlockHashList[0] == "0")
-
-			if !del {
-				tomb := []string{"0"}
-				idxMetaMap[key].Version = idxMetaMap[key].Version + 1
-				idxMetaMap[key].BlockHashList = tomb
-			}
-
-		}
-
-	}
-
-	//iterate new files to add new
-	for name, blocks := range localfiles {
-		if _, ok := idxMetaMap[name]; !ok {
-			var meta FileMetaData
-			meta.Filename = name
-			meta.Version = 1
-			meta.BlockHashList = blocks
-			idxMetaMap[name] = &meta
-		}
-	}
-	fmt.Println(idxMetaMap)
-
-	// ============================ Now idxMetaMap is updated; try to compare with server map===============
+	// ============================ Now idxMetaMap is updated; try to compare with server map ===============
 	// the idea is : not modify the server then download to local
 	downloadblockmap := make(map[string]Block)
 	// get server map
@@ -234,7 +116,6 @@ func ClientSync(client RPCClient) {
 
 	// ==================================Finally, Write into a index file=============================
 	writeindexFile(client, &idxMetaMap)
-
 }
 
 /*
@@ -323,24 +204,150 @@ func uploadfile(client RPCClient, localname string, idxMetaMap *(map[string]*Fil
 
 }
 
-func DownloadnUpdate(client RPCClient, downloadblockmap *map[string]Block, remotemeta *FileMetaData, idxMetaMap *map[string](*FileMetaData), blocks *[]Block) {
-	// download
-	// blocks := make([]Block, 0, len(remoteblist))
-	for _, sha256 := range remotemeta.BlockHashList {
-		var block Block
-		block, ok := (*downloadblockmap)[sha256]
-		if !ok {
-			client.GetBlock(sha256, &block)
-			(*downloadblockmap)[sha256] = block
+func readIndexFile(client RPCClient) map[string]*FileMetaData {
+	// For read access.
+	indexFilename := filepath.Join(client.BaseDir, "index.txt")
+	indexFile, err := os.Open(indexFilename)
+
+	if err != nil {
+		// index.txt does not exit
+		indexFile, err = os.Create(indexFilename)
+		if err != nil {
+			panic(err)
 		}
-		*blocks = append(*blocks, block)
 	}
-	//update
-	var newmeta FileMetaData
-	newmeta.Filename = remotemeta.Filename
-	newmeta.Version = remotemeta.Version
-	newmeta.BlockHashList = remotemeta.BlockHashList
-	(*idxMetaMap)[remotemeta.Filename] = &newmeta
+	defer indexFile.Close()
+
+	fileMetaMap := make(map[string]*FileMetaData)
+
+	// read index file
+	scanner := bufio.NewScanner(indexFile)
+	for scanner.Scan() {
+		// fmt.Println(scanner.Text())
+		lineParts := strings.Split(scanner.Text(), ",")
+		if len(lineParts) == 3 {
+			filename := lineParts[0]
+			version, _ := strconv.Atoi(lineParts[1])
+			blockHasheListString := lineParts[2]
+			blockHasheList := strings.Split(blockHasheListString, " ")
+
+			fileMeta := FileMetaData{
+				Filename:      filename,
+				Version:       version,
+				BlockHashList: blockHasheList,
+			}
+			fileMetaMap[filename] = &fileMeta
+		} else {
+			panic("Invalid index.txt")
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
+
+	return fileMetaMap
+}
+
+func updateFileMetaMapWithLocalFiles(client RPCClient, fileMetaMap map[string]*FileMetaData) map[string]*FileMetaData {
+	localFileMap := getLocalFileHashBlockListMap(client)
+
+	// iterate over the file meta map and see if old file exists
+	for filename, fileMeta := range fileMetaMap {
+		if localFileBlockHashList, ok := localFileMap[filename]; ok {
+			// find the existing file
+			if len(localFileBlockHashList) != len(fileMeta.BlockHashList) {
+				fileMeta.BlockHashList = localFileBlockHashList
+				fileMeta.Version++
+			} else {
+				isFileUpdated := false
+				for i, blockHash := range localFileBlockHashList {
+					if blockHash != fileMeta.BlockHashList[i] {
+						fileMeta.BlockHashList[i] = blockHash
+						isFileUpdated = true
+					}
+				}
+
+				if isFileUpdated {
+					fileMeta.Version++
+				}
+			}
+		} else {
+			// file does not exist in dir, shoud be deleted
+			isAlreadyDeleted := len(fileMeta.BlockHashList) == 1 && fileMeta.BlockHashList[0] == "0"
+
+			// if file is not mark as deleted in file meta, update it
+			if !isAlreadyDeleted {
+				tombstoneBlockHashList := []string{"0"}
+				fileMeta.BlockHashList = tombstoneBlockHashList
+				fileMeta.Version++
+			}
+		}
+	}
+
+	// iterate over the local files and create new files
+	for filename, localFileBlockHashList := range localFileMap {
+		if _, ok := fileMetaMap[filename]; !ok {
+			fileMeta := FileMetaData{
+				Filename:      filename,
+				Version:       1,
+				BlockHashList: localFileBlockHashList,
+			}
+			fileMetaMap[filename] = &fileMeta
+		}
+	}
+
+	fmt.Println(fileMetaMap)
+	return fileMetaMap
+}
+
+func getLocalFileHashBlockListMap(client RPCClient) map[string][]string {
+	// open directory
+	localFileInfos, err := ioutil.ReadDir(client.BaseDir)
+	if err != nil {
+		panic(err)
+	}
+
+	localFileMap := make(map[string][]string)
+	// iterate over all the local files
+	for _, fileInfo := range localFileInfos {
+		if fileInfo.Name() == "index.txt" {
+			continue
+		}
+		// check if the file is modified
+
+		file, err := os.Open(filepath.Join(client.BaseDir, fileInfo.Name()))
+		if err != nil {
+			panic(err)
+		}
+
+		// divide into blocks
+		fileSize := fileInfo.Size()
+		blockSize := uint64(client.BlockSize)
+		numBlocks := uint64(math.Ceil(float64(fileSize) / float64(blockSize)))
+
+		var blockHashList []string
+
+		// for empty file
+		if numBlocks == 0 {
+			// write to hash
+			blockBuffer := make([]byte, 0)
+			hash := getBufferHash(&blockBuffer)
+			blockHashList = append(blockHashList, hash)
+		}
+
+		for i := uint64(0); i < numBlocks; i++ {
+			currentBlockSize := int(math.Min(float64(blockSize), float64(fileSize-int64(i*blockSize))))
+			blockBuffer := make([]byte, currentBlockSize)
+
+			file.Read(blockBuffer)
+			hash := getBufferHash(&blockBuffer)
+			blockHashList = append(blockHashList, hash)
+		}
+		localFileMap[fileInfo.Name()] = blockHashList
+	}
+
+	return localFileMap
 }
 
 func writeFile(client RPCClient, meta FileMetaData, blocks []Block) {
@@ -387,4 +394,30 @@ func writeindexFile(client RPCClient, idxMetaMap *map[string](*FileMetaData)) {
 
 	}
 	f.Sync()
+}
+
+func getBufferHash(buffer *[]byte) string {
+	hash := sha256.Sum256(*buffer)
+	hashString := hex.EncodeToString(hash[:])
+	return hashString
+}
+
+func DownloadnUpdate(client RPCClient, downloadblockmap *map[string]Block, remotemeta *FileMetaData, idxMetaMap *map[string](*FileMetaData), blocks *[]Block) {
+	// download
+	// blocks := make([]Block, 0, len(remoteblist))
+	for _, sha256 := range remotemeta.BlockHashList {
+		var block Block
+		block, ok := (*downloadblockmap)[sha256]
+		if !ok {
+			client.GetBlock(sha256, &block)
+			(*downloadblockmap)[sha256] = block
+		}
+		*blocks = append(*blocks, block)
+	}
+	//update
+	var newmeta FileMetaData
+	newmeta.Filename = remotemeta.Filename
+	newmeta.Version = remotemeta.Version
+	newmeta.BlockHashList = remotemeta.BlockHashList
+	(*idxMetaMap)[remotemeta.Filename] = &newmeta
 }
