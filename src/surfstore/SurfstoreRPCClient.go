@@ -15,7 +15,7 @@ func (surfClient *RPCClient) GetBlock(blockHash string, block *Block) error {
 	// connect to the server
 	conn, err := rpc.DialHTTP("tcp", surfClient.ServerAddr)
 	if err != nil {
-		log.Println("Client::GetBlock - Failed to connect to server")
+		log.Fatalln("Client::GetBlock - Failed to connect to server", err)
 		return err
 	}
 	defer conn.Close()
@@ -23,7 +23,7 @@ func (surfClient *RPCClient) GetBlock(blockHash string, block *Block) error {
 	// perform the RPC call
 	err = conn.Call("Server.GetBlock", blockHash, block)
 	if err != nil {
-		log.Println("Client::GetBlock - Failed to get block ", blockHash)
+		log.Fatalln("Client::GetBlock - Failed to get block ", blockHash, err)
 		return err
 	}
 
@@ -35,7 +35,7 @@ func (surfClient *RPCClient) HasBlock(blockHash string, succ *bool) error {
 	// connect to the server
 	conn, err := rpc.DialHTTP("tcp", surfClient.ServerAddr)
 	if err != nil {
-		log.Println("Client::HasBlock - Failed to connect to server")
+		log.Fatalln("Client::HasBlock - Failed to connect to server", err)
 		return err
 	}
 	defer conn.Close()
@@ -43,8 +43,7 @@ func (surfClient *RPCClient) HasBlock(blockHash string, succ *bool) error {
 	// perform the RPC call
 	err = conn.Call("Server.HasBlock", blockHash, succ)
 	if err != nil {
-		log.Println("Client::HasBlock - Failed to check if server has block", blockHash)
-		log.Println(err)
+		log.Fatalln("Client::HasBlock - Failed to check if server has block", blockHash, err)
 		return err
 	}
 
@@ -55,7 +54,7 @@ func (surfClient *RPCClient) PutBlock(block Block, succ *bool) error {
 	// connect to the server
 	conn, err := rpc.DialHTTP("tcp", surfClient.ServerAddr)
 	if err != nil {
-		log.Println("Client::PutBlock - Failed to connect to server")
+		log.Fatalln("Client::PutBlock - Failed to connect to server", err)
 		return err
 	}
 	defer conn.Close()
@@ -63,7 +62,7 @@ func (surfClient *RPCClient) PutBlock(block Block, succ *bool) error {
 	// perform the RPC call
 	err = conn.Call("Server.PutBlock", block, succ)
 	if err != nil {
-		log.Println("Client::PutBlock - Failed to put block", block.Hash())
+		log.Fatalln("Client::PutBlock - Failed to put block", block.Hash(), err)
 		return err
 	}
 
@@ -74,7 +73,7 @@ func (surfClient *RPCClient) HasBlocks(blockHashesIn []string, blockHashesOut *[
 	// connect to the server
 	conn, err := rpc.DialHTTP("tcp", surfClient.ServerAddr)
 	if err != nil {
-		log.Println("Client::HasBlocks - Failed to connect to server")
+		log.Fatalln("Client::HasBlocks - Failed to connect to server", err)
 		return err
 	}
 	defer conn.Close()
@@ -82,7 +81,7 @@ func (surfClient *RPCClient) HasBlocks(blockHashesIn []string, blockHashesOut *[
 	// perform the RPC call
 	err = conn.Call("Server.HasBlocks", blockHashesIn, blockHashesOut)
 	if err != nil {
-		log.Println("Client::HasBlocks - Failed to check if server has blocks")
+		log.Fatalln("Client::HasBlocks - Failed to check if server has blocks", err)
 		return err
 	}
 
@@ -93,7 +92,7 @@ func (surfClient *RPCClient) GetFileInfoMap(succ *bool, serverFileInfoMap *map[s
 	// connect to the server
 	conn, err := rpc.DialHTTP("tcp", surfClient.ServerAddr)
 	if err != nil {
-		log.Println("Client::GetFileInfoMap - Failed to connect to server")
+		log.Fatalln("Client::GetFileInfoMap - Failed to connect to server", err)
 		return err
 	}
 	defer conn.Close()
@@ -101,7 +100,7 @@ func (surfClient *RPCClient) GetFileInfoMap(succ *bool, serverFileInfoMap *map[s
 	// perform the call
 	err = conn.Call("Server.GetFileInfoMap", succ, serverFileInfoMap)
 	if err != nil {
-		log.Println("Client::GetFileInfoMap - Failed to get file info map")
+		log.Fatalln("Client::GetFileInfoMap - Failed to get file info map", err)
 		return err
 	}
 
@@ -112,7 +111,7 @@ func (surfClient *RPCClient) UpdateFile(fileMeta *FileMetaData, latestVersion *i
 	// connect to the server
 	conn, err := rpc.DialHTTP("tcp", surfClient.ServerAddr)
 	if err != nil {
-		log.Println("Client::UpdateFile - Failed to connect to server")
+		log.Fatalln("Client::UpdateFile - Failed to connect to server", err)
 		return err
 	}
 	defer conn.Close()
@@ -120,7 +119,7 @@ func (surfClient *RPCClient) UpdateFile(fileMeta *FileMetaData, latestVersion *i
 	// perform the call
 	err = conn.Call("Server.UpdateFile", fileMeta, latestVersion)
 	if err != nil {
-		log.Println("Client::UpdateFile - Failed to update file meta:", fileMeta.Filename)
+		log.Fatalln("Client::UpdateFile - Failed to update file meta:", fileMeta.Filename, err)
 		return err
 	}
 

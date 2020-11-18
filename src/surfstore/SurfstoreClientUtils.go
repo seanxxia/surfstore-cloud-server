@@ -120,7 +120,6 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 	err = client.UpdateFile(fileMeta, &latestVersion)
 	// TODO: Handle the case when latestVersion != fileMeta.Version
 	if err != nil {
-		log.Fatalln(err)
 		return false
 	}
 
@@ -313,13 +312,13 @@ func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) {
 	} else {
 		file, err := os.OpenFile(filepath.Join(client.BaseDir, fileMeta.Filename), os.O_CREATE|os.O_RDWR, 0755)
 		if err != nil {
-			log.Fatalln("writeFile: Failed to open file:", fileMeta.Filename)
+			log.Fatalln("writeFile: Failed to open file:", fileMeta.Filename, err)
 		} else {
 			defer file.Close()
 			for _, block := range *blocks {
 				_, err := file.Write(block.Data)
 				if err != nil {
-					log.Fatalln("writeFile: Failed to write to file:", fileMeta.Filename)
+					log.Fatalln("writeFile: Failed to write to file:", fileMeta.Filename, err)
 				}
 			}
 			file.Sync()
