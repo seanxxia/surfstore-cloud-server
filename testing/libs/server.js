@@ -55,6 +55,12 @@ function createClient(blockSize, files) {
   };
 
   const writeFiles = (files) => writeFilesToDir(dir.name, files ?? {});
+  const deleteFiles = (files) => {
+    for (const file of files) {
+      shell.rm('-rf', path.join(dir.name, file));
+    }
+  }
+
   const readFiles = () => {
     const fileDirMap = mapFiles(path.join(dir.name, './**/*'), { cwd: dir.name });
     const fileMap = {};
@@ -66,7 +72,7 @@ function createClient(blockSize, files) {
     return fileMap;
   };
 
-  return { run, writeFiles, readFiles, cleanup };
+  return { run, writeFiles, readFiles, deleteFiles, cleanup };
 }
 
 function createTempDir(files) {

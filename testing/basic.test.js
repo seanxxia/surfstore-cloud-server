@@ -75,3 +75,38 @@ test('should sync updates.', async () => {
     expect(c2Files[fname].content).toBe(content);
   }
 });
+
+
+test('should sync deletes.', async () => {
+  const files = {
+    't1.txt': 'This is test1',
+    't2.txt': 'This is test2',
+  };
+
+  const client1 = getClient(files);
+  const client2 = getClient();
+
+  client1.run();
+  await waitForClientRun();
+  client2.run();
+  await waitForClientRun();
+
+  delete files['t1.txt'];
+  client1.deleteFiles(['t1.txt']);
+
+  client1.run();
+  await waitForClientRun();
+  client2.run();
+  await waitForClientRun();
+
+  const c1Files = client1.readFiles();
+  const c2Files = client2.readFiles();
+
+  expect(c1Files.length).toBe(c2Files.length);
+  for (const [fname, content] of Object.entries(files)) {
+    expect(c1Files[fname]).toBeDefined();
+    expect(c2Files[fname]).toBeDefined();
+    expect(c1Files[fname].content).toBe(content);
+    expect(c2Files[fname].content).toBe(content);
+  }
+});
