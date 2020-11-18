@@ -12,7 +12,6 @@ type Server struct {
 }
 
 func (s *Server) GetFileInfoMap(succ *bool, serverFileInfoMap *map[string]FileMetaData) error {
-	// panic("todo")
 	err := s.MetaStore.GetFileInfoMap(succ, serverFileInfoMap)
 	if err != nil {
 		*succ = false
@@ -21,19 +20,16 @@ func (s *Server) GetFileInfoMap(succ *bool, serverFileInfoMap *map[string]FileMe
 }
 
 func (s *Server) UpdateFile(fileMetaData *FileMetaData, latestVersion *int) error {
-	// panic("todo")
 	err := s.MetaStore.UpdateFile(fileMetaData, latestVersion)
 	return err
 }
 
 func (s *Server) GetBlock(blockHash string, blockData *Block) error {
-	// panic("todo")
 	err := s.BlockStore.GetBlock(blockHash, blockData)
 	return err
 }
 
 func (s *Server) PutBlock(blockData Block, succ *bool) error {
-	// panic("todo")
 	err := s.BlockStore.PutBlock(blockData, succ)
 	if err != nil {
 		*succ = false
@@ -42,7 +38,6 @@ func (s *Server) PutBlock(blockData Block, succ *bool) error {
 }
 
 func (s *Server) HasBlocks(blockHashesIn []string, blockHashesOut *[]string) error {
-	// panic("todo")
 	err := s.BlockStore.HasBlocks(blockHashesIn, blockHashesOut)
 	return err
 }
@@ -61,8 +56,6 @@ func NewSurfstoreServer() Server {
 }
 
 func ServeSurfstoreServer(hostAddr string, surfstoreServer Server) error {
-	// panic("todo")
-
 	rpc.Register(&surfstoreServer)
 	rpc.HandleHTTP()
 	ln, err := net.Listen("tcp", hostAddr)

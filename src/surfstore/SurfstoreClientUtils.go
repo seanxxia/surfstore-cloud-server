@@ -2,9 +2,6 @@ package surfstore
 
 import (
 	"bufio"
-	"crypto/sha256"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -46,12 +43,12 @@ func ClientSync(client RPCClient) {
 			if localFileMeta.Version > remoteFileMeta.Version { // modify and upload newest file to server
 				uploadFile(client, localFileMeta)
 			} else {
-				downloadFile(client, localFileMeta, &remoteFileMeta)
+				downloadFileAndUpdateLocalFileMeta(client, localFileMeta, &remoteFileMeta)
 			}
 		} else {
 			// server file not find in local.
 			var localFileMeta FileMetaData
-			downloadFile(client, &localFileMeta, &remoteFileMeta)
+			downloadFileAndUpdateLocalFileMeta(client, &localFileMeta, &remoteFileMeta)
 			fileMetaMap[remoteFilename] = &localFileMeta
 		}
 	}
@@ -63,37 +60,23 @@ func ClientSync(client RPCClient) {
 		}
 	}
 
-	newserverfilemap := new(map[string]FileMetaData)
-	succ := false
-	err = client.GetFileInfoMap(&succ, newserverfilemap)
-	if err != nil {
-		errors.New("get map error")
-	}
+	// ???????????????????
+	// newserverfilemap := new(map[string]FileMetaData)
+	// succ := false
+	// err = client.GetFileInfoMap(&succ, newserverfilemap)
+	// if err != nil {
+	// 	errors.New("get map error")
+	// }
 
 	// ==================================Finally, Write into a index file=============================
-	writeindexFile(client, &fileMetaMap)
-}
-
-/*
-Helper function to print the contents of the metadata map.
-*/
-func PrintMetaMap(metaMap map[string]FileMetaData) {
-
-	fmt.Println("--------BEGIN PRINT MAP--------")
-
-	for _, filemeta := range metaMap {
-		fmt.Println("\t", filemeta.Filename, filemeta.Version, filemeta.BlockHashList)
-	}
-
-	fmt.Println("---------END PRINT MAP--------")
-
+	writeIndexFile(client, fileMetaMap)
 }
 
 func uploadFile(client RPCClient, fileMeta *FileMetaData) {
 	// divide into blocks
 	filename := fileMeta.Filename
 
-	if len(fileMeta.BlockHashList) == 1 && fileMeta.BlockHashList[0] == "0" {
+	if fileMeta.IsTombstone() {
 		var v int
 		client.UpdateFile(fileMeta, &v)
 
@@ -110,18 +93,10 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) {
 	fileInfo, _ := file.Stat()
 	fileSize := fileInfo.Size()
 	numBlocks := uint64(math.Ceil(float64(fileSize) / float64(blockSize)))
-	var blockHashList []string
-
-	// for empty file
 	if numBlocks == 0 {
+		// for empty file
 		blockBuffer := make([]byte, 0)
-		blockHash := getBufferHash(&blockBuffer)
-		blockHashList = append(blockHashList, blockHash)
-
-		block := Block{
-			BlockData: blockBuffer,
-			BlockSize: 0,
-		}
+		block := Block{Data: blockBuffer}
 
 		succ := false
 		err := client.PutBlock(block, &succ)
@@ -131,28 +106,18 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) {
 	} else {
 		for i := uint64(0); i < numBlocks; i++ {
 			currentBlockSize := int(math.Min(float64(blockSize), float64(fileSize-int64(i*blockSize))))
-			blockBuffer := make([]byte, currentBlockSize)
-			file.Read(blockBuffer)
-
-			// write to hash
-			blockHash := getBufferHash(&blockBuffer)
-			blockHashList = append(blockHashList, blockHash)
+			block := NewBlock(currentBlockSize)
+			file.Read(block.Data)
 
 			// write block to server
-			succ := false
-			client.HasBlock(blockHash, &succ)
-
 			// if there is error -> get block fail -> put block
 			// if the error is nil -> get block succ -> no need
-			if succ { // found block
+			succ := false
+			client.HasBlock(block.Hash(), &succ)
+			if succ {
 				fmt.Println("found block and not need to upload")
 			} else {
 				//put block
-				block := Block{
-					BlockData: blockBuffer,
-					BlockSize: currentBlockSize,
-				}
-
 				succ := false
 				err := client.PutBlock(block, &succ)
 				if succ == false || err != nil {
@@ -189,7 +154,6 @@ func readIndexFile(client RPCClient) map[string]*FileMetaData {
 	// read index file
 	scanner := bufio.NewScanner(indexFile)
 	for scanner.Scan() {
-		// fmt.Println(scanner.Text())
 		lineParts := strings.Split(scanner.Text(), ",")
 		if len(lineParts) == 3 {
 			filename := lineParts[0]
@@ -240,12 +204,9 @@ func updateFileMetaMapWithLocalFiles(client RPCClient, fileMetaMap map[string]*F
 			}
 		} else {
 			// file does not exist in dir, shoud be deleted
-			isAlreadyDeleted := len(fileMeta.BlockHashList) == 1 && fileMeta.BlockHashList[0] == "0"
-
 			// if file is not mark as deleted in file meta, update it
-			if !isAlreadyDeleted {
-				tombstoneBlockHashList := []string{"0"}
-				fileMeta.BlockHashList = tombstoneBlockHashList
+			if !fileMeta.IsTombstone() {
+				fileMeta.MarkTombstone()
 				fileMeta.Version++
 			}
 		}
@@ -263,7 +224,6 @@ func updateFileMetaMapWithLocalFiles(client RPCClient, fileMetaMap map[string]*F
 		}
 	}
 
-	fmt.Println(fileMetaMap)
 	return fileMetaMap
 }
 
@@ -293,22 +253,19 @@ func getLocalFileHashBlockListMap(client RPCClient) map[string][]string {
 		numBlocks := uint64(math.Ceil(float64(fileSize) / float64(blockSize)))
 
 		var blockHashList []string
-
 		// for empty file
 		if numBlocks == 0 {
 			// write to hash
-			blockBuffer := make([]byte, 0)
-			hash := getBufferHash(&blockBuffer)
-			blockHashList = append(blockHashList, hash)
+			block := NewBlock(0)
+			blockHashList = append(blockHashList, block.Hash())
 		}
 
 		for i := uint64(0); i < numBlocks; i++ {
 			currentBlockSize := int(math.Min(float64(blockSize), float64(fileSize-int64(i*blockSize))))
-			blockBuffer := make([]byte, currentBlockSize)
+			block := NewBlock(currentBlockSize)
 
-			file.Read(blockBuffer)
-			hash := getBufferHash(&blockBuffer)
-			blockHashList = append(blockHashList, hash)
+			file.Read(block.Data)
+			blockHashList = append(blockHashList, block.Hash())
 		}
 		localFileMap[fileInfo.Name()] = blockHashList
 	}
@@ -316,42 +273,32 @@ func getLocalFileHashBlockListMap(client RPCClient) map[string][]string {
 	return localFileMap
 }
 
-func writeindexFile(client RPCClient, idxMetaMap *map[string](*FileMetaData)) {
+func writeIndexFile(client RPCClient, fileMetaMap map[string]*FileMetaData) {
 	// err := os.Truncate(filepath.Join(client.BaseDir, "index.txt"), 0)
 
-	f, err := os.OpenFile(filepath.Join(client.BaseDir, "index.txt"), os.O_RDWR|os.O_TRUNC, 0755)
+	file, err := os.OpenFile(filepath.Join(client.BaseDir, "index.txt"), os.O_RDWR|os.O_TRUNC, 0755)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
-	for _, meta := range *idxMetaMap {
-		n := meta.Filename
-		v := meta.Version
-		blist := meta.BlockHashList
-		fmt.Println("=======>", blist)
-
-		var line string
-		line = n + "," + strconv.Itoa(v) + ","
-		for _, hash := range blist {
-			line = line + hash + " "
-		}
+	for _, fileMeta := range fileMetaMap {
+		line := fmt.Sprintf(
+			"%s,%d,%s",
+			fileMeta.Filename,
+			fileMeta.Version,
+			strings.Join(fileMeta.BlockHashList, " "),
+		)
 		line = strings.TrimSpace(line)
-		_, err := f.WriteString(line + "\n")
+
+		_, err := file.WriteString(line + "\n")
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
-
 	}
-	f.Sync()
+	file.Sync()
 }
 
-func getBufferHash(buffer *[]byte) string {
-	hash := sha256.Sum256(*buffer)
-	hashString := hex.EncodeToString(hash[:])
-	return hashString
-}
-
-func downloadFile(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta *FileMetaData) {
+func downloadFileAndUpdateLocalFileMeta(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta *FileMetaData) {
 	var fileBlocks []Block
 
 	if len(remoteFileMeta.BlockHashList) != 1 || remoteFileMeta.BlockHashList[0] != "0" {
@@ -365,12 +312,11 @@ func downloadFile(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta 
 	localFileMeta.Filename = remoteFileMeta.Filename
 	localFileMeta.Version = remoteFileMeta.Version
 	localFileMeta.BlockHashList = remoteFileMeta.BlockHashList
-	fmt.Println("QWWEWEWEWEWEEs")
 	writeFile(client, localFileMeta, &fileBlocks)
 }
 
 func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) {
-	if len(fileMeta.BlockHashList) == 0 && fileMeta.BlockHashList[0] == "0" {
+	if fileMeta.IsTombstone() {
 		os.Remove(filepath.Join(client.BaseDir, fileMeta.Filename))
 	} else {
 		file, err := os.OpenFile(filepath.Join(client.BaseDir, fileMeta.Filename), os.O_CREATE|os.O_RDWR, 0755)
@@ -379,7 +325,7 @@ func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) {
 		} else {
 			defer file.Close()
 			for _, block := range *blocks {
-				_, err := file.Write(block.BlockData)
+				_, err := file.Write(block.Data)
 				if err != nil {
 					log.Println("file:" + fileMeta.Filename + "write error")
 					return
@@ -388,4 +334,19 @@ func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) {
 			file.Sync()
 		}
 	}
+}
+
+/*
+Helper function to print the contents of the metadata map.
+*/
+func PrintMetaMap(metaMap map[string]FileMetaData) {
+
+	fmt.Println("--------BEGIN PRINT MAP--------")
+
+	for _, filemeta := range metaMap {
+		fmt.Println("\t", filemeta.Filename, filemeta.Version, filemeta.BlockHashList)
+	}
+
+	fmt.Println("---------END PRINT MAP--------")
+
 }

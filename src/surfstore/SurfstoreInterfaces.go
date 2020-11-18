@@ -1,14 +1,45 @@
 package surfstore
 
+import (
+	"crypto/sha256"
+	"encoding/hex"
+)
+
 type Block struct {
-	BlockData []byte
-	BlockSize int
+	Data []byte
+}
+
+func NewBlock(size int) Block {
+	buffer := make([]byte, size)
+	return Block{Data: buffer}
+}
+
+func (block *Block) Hash() string {
+	return getBytesHash(&block.Data)
+}
+
+func (block *Block) Size() int {
+	return len(block.Data)
+}
+
+func getBytesHash(buffer *[]byte) string {
+	hash := sha256.Sum256(*buffer)
+	hashString := hex.EncodeToString(hash[:])
+	return hashString
 }
 
 type FileMetaData struct {
 	Filename      string
 	Version       int
 	BlockHashList []string
+}
+
+func (fm *FileMetaData) MarkTombstone() {
+	fm.BlockHashList = []string{"0"}
+}
+
+func (fm *FileMetaData) IsTombstone() bool {
+	return len(fm.BlockHashList) == 1 && fm.BlockHashList[0] == "0"
 }
 
 type Surfstore interface {

@@ -1,7 +1,6 @@
 package surfstore
 
 import (
-	"fmt"
 	"log"
 	"net/rpc"
 )
@@ -14,130 +13,118 @@ type RPCClient struct {
 
 func (surfClient *RPCClient) GetBlock(blockHash string, block *Block) error {
 	// connect to the server
-	conn, e := rpc.DialHTTP("tcp", surfClient.ServerAddr)
-	if e != nil {
-		log.Println("GetBlock: Not connected")
-		return e
-	} else {
-		fmt.Println("connected for get block")
+	conn, err := rpc.DialHTTP("tcp", surfClient.ServerAddr)
+	if err != nil {
+		log.Println("Client::GetBlock - Failed to connect to server")
+		return err
+	}
+	defer conn.Close()
+
+	// perform the RPC call
+	err = conn.Call("Server.GetBlock", blockHash, block)
+	if err != nil {
+		log.Println("Client::GetBlock - Failed to get block ", blockHash)
+		return err
 	}
 
-	// perform the call
-	e = conn.Call("Server.GetBlock", blockHash, block)
-	if e != nil {
-		conn.Close()
-		fmt.Println("client fail to get block ")
-		return e
-	}
-
-	// close the connection
-	return conn.Close()
+	log.Println("Client::GetBlock - Block received", blockHash)
+	return nil
 }
 
 func (surfClient *RPCClient) HasBlock(blockHash string, succ *bool) error {
-	// ==============> panic("todo")
 	// connect to the server
-	conn, e := rpc.DialHTTP("tcp", surfClient.ServerAddr)
-	if e != nil {
-		fmt.Println("Not connected")
-		return e
-	} else {
-		fmt.Println("connected for has block")
+	conn, err := rpc.DialHTTP("tcp", surfClient.ServerAddr)
+	if err != nil {
+		log.Println("Client::HasBlock - Failed to connect to server")
+		return err
 	}
-	// perform the call
-	e = conn.Call("Server.HasBlock", blockHash, succ)
+	defer conn.Close()
 
-	if e != nil {
-		conn.Close()
-		return e
+	// perform the RPC call
+	err = conn.Call("Server.HasBlock", blockHash, succ)
+	if err != nil {
+		log.Println("Client::HasBlock - Failed to check if server has block", blockHash)
+		return err
 	}
 
-	// close the connection
-	return conn.Close()
+	return nil
 }
 
 func (surfClient *RPCClient) PutBlock(block Block, succ *bool) error {
-	// ==============> panic("todo")
 	// connect to the server
-	conn, e := rpc.DialHTTP("tcp", surfClient.ServerAddr)
-	if e != nil {
-		fmt.Println("Not connected")
-		return e
-	} else {
-		fmt.Println("connected for put")
+	conn, err := rpc.DialHTTP("tcp", surfClient.ServerAddr)
+	if err != nil {
+		log.Println("Client::PutBlock - Failed to connect to server")
+		return err
 	}
-	// perform the call
-	e = conn.Call("Server.PutBlock", block, succ)
-	if e != nil {
-		conn.Close()
-		return e
+	defer conn.Close()
+
+	// perform the RPC call
+	err = conn.Call("Server.PutBlock", block, succ)
+	if err != nil {
+		log.Println("Client::PutBlock - Failed to put block", block.Hash())
+		return err
 	}
 
-	// close the connection
-	return conn.Close()
+	return nil
 }
 
 func (surfClient *RPCClient) HasBlocks(blockHashesIn []string, blockHashesOut *[]string) error {
-	// ==============> panic("todo")
 	// connect to the server
-	conn, e := rpc.DialHTTP("tcp", surfClient.ServerAddr)
-	if e != nil {
-		return e
+	conn, err := rpc.DialHTTP("tcp", surfClient.ServerAddr)
+	if err != nil {
+		log.Println("Client::HasBlocks - Failed to connect to server")
+		return err
 	}
-	// perform the call
-	e = conn.Call("Server.HasBlocks", blockHashesIn, blockHashesOut)
-	if e != nil {
-		conn.Close()
-		return e
+	defer conn.Close()
+
+	// perform the RPC call
+	err = conn.Call("Server.HasBlocks", blockHashesIn, blockHashesOut)
+	if err != nil {
+		log.Println("Client::HasBlocks - Failed to check if server has blocks")
+		return err
 	}
 
-	// close the connection
-	return conn.Close()
+	return nil
 }
 
 func (surfClient *RPCClient) GetFileInfoMap(succ *bool, serverFileInfoMap *map[string]FileMetaData) error {
-	// ==============> panic("todo")
 	// connect to the server
-	conn, e := rpc.DialHTTP("tcp", surfClient.ServerAddr)
-	if e != nil {
-		fmt.Println("Not connected")
-		return e
-	} else {
-		fmt.Println("connected for get info")
+	conn, err := rpc.DialHTTP("tcp", surfClient.ServerAddr)
+	if err != nil {
+		log.Println("Client::GetFileInfoMap - Failed to connect to server")
+		return err
 	}
+	defer conn.Close()
 
 	// perform the call
-	e = conn.Call("Server.GetFileInfoMap", succ, serverFileInfoMap)
-	if e != nil {
-		conn.Close()
-		fmt.Println("fail to call rpc getfileinfomap ")
-		fmt.Print(e)
-		return e
+	err = conn.Call("Server.GetFileInfoMap", succ, serverFileInfoMap)
+	if err != nil {
+		log.Println("Client::GetFileInfoMap - Failed to get file info map")
+		return err
 	}
 
-	// close the connection
-	return conn.Close()
+	return nil
 }
 
-func (surfClient *RPCClient) UpdateFile(fileMetaData *FileMetaData, latestVersion *int) error {
-	// ==============> panic("todo")
+func (surfClient *RPCClient) UpdateFile(fileMeta *FileMetaData, latestVersion *int) error {
 	// connect to the server
-	conn, e := rpc.DialHTTP("tcp", surfClient.ServerAddr)
-	if e != nil {
-		fmt.Println("Not connected")
-		return e
-	} else {
-		fmt.Println("connected for update file")
+	conn, err := rpc.DialHTTP("tcp", surfClient.ServerAddr)
+	if err != nil {
+		log.Println("Client::UpdateFile - Failed to connect to server")
+		return err
 	}
+	defer conn.Close()
+
 	// perform the call
-	e = conn.Call("Server.UpdateFile", fileMetaData, latestVersion)
-	if e != nil {
-		conn.Close()
-		return e
+	err = conn.Call("Server.UpdateFile", fileMeta, latestVersion)
+	if err != nil {
+		log.Println("Client::UpdateFile - Failed to update file meta:", fileMeta.Filename)
+		return err
 	}
 
 	// close the connection
-	return conn.Close()
+	return nil
 }
 
 var _ Surfstore = new(RPCClient)

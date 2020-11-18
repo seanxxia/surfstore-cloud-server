@@ -1,10 +1,7 @@
 package surfstore
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
-	"fmt"
 )
 
 type BlockStore struct {
@@ -12,47 +9,34 @@ type BlockStore struct {
 }
 
 func (bs *BlockStore) GetBlock(blockHash string, blockData *Block) error {
-	// panic("todo")
-	value, ok := bs.BlockMap[blockHash]
-	if ok {
-		*blockData = value
-		return nil
-	} else {
-		err := errors.New("block not found")
-		fmt.Println(err)
-		return err
+	block, ok := bs.BlockMap[blockHash]
+	if !ok {
+		return errors.New("block not found")
 	}
+
+	*blockData = block
+	return nil
 
 }
 
 func (bs *BlockStore) PutBlock(block Block, succ *bool) error {
-	// panic("todo")
-	hash := sha256.Sum256(block.BlockData)
-	str := hex.EncodeToString(hash[:])
-	bs.BlockMap[str] = block
+	bs.BlockMap[block.Hash()] = block
 	*succ = true
 	return nil
 }
 
-func (bs *BlockStore) HasBlocks(blockHashesIn []string, blockHashesOut *[]string) error {
-	// panic("todo")
-	for _, h := range blockHashesIn {
-		_, ok := bs.BlockMap[h]
-		if ok {
-			*blockHashesOut = append(*blockHashesOut, h)
+func (bs *BlockStore) HasBlocks(blockHashList []string, existedBlockHashList *[]string) error {
+	for _, blockHash := range blockHashList {
+		if _, ok := bs.BlockMap[blockHash]; ok {
+			*existedBlockHashList = append(*existedBlockHashList, blockHash)
 		}
 	}
+
 	return nil
 }
 
 func (bs *BlockStore) HasBlock(blockHash string, succ *bool) error {
-	_, ok := bs.BlockMap[blockHash]
-	if ok {
-		*succ = true
-	} else {
-		*succ = false
-	}
-
+	_, *succ = bs.BlockMap[blockHash]
 	return nil
 }
 
