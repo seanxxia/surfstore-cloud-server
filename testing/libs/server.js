@@ -46,7 +46,7 @@ function createClient(blockSize, files) {
     shell.exec(execCommand, {
       cwd: path.join(__dirname, '../../'),
       silent: true,
-      async: true,
+      async: false,
     });
 
   const cleanup = () => {
@@ -59,7 +59,7 @@ function createClient(blockSize, files) {
     for (const file of files) {
       shell.rm('-rf', path.join(dir.name, file));
     }
-  }
+  };
 
   const readFiles = () => {
     const fileDirMap = mapFiles(path.join(dir.name, './**/*'), { cwd: dir.name });

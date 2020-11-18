@@ -1,9 +1,10 @@
 const { runServer } = require('./libs/server');
-const { waitForServerStart, waitForClientRun } = require('./libs/utils');
+const { waitForServerStart } = require('./libs/utils');
 
 jest.setTimeout(100000);
 
-let server; let getClient;
+let server;
+let getClient;
 
 beforeEach(async () => {
   // blockSize = 4096
@@ -26,9 +27,7 @@ test('should sync files.', async () => {
   const client2 = getClient();
 
   client1.run();
-  await waitForClientRun();
   client2.run();
-  await waitForClientRun();
 
   const c1Files = client1.readFiles();
   const c2Files = client2.readFiles();
@@ -52,17 +51,13 @@ test('should sync updates.', async () => {
   const client2 = getClient();
 
   client1.run();
-  await waitForClientRun();
   client2.run();
-  await waitForClientRun();
 
   files['t1.txt'] = 'This is new test1!!!!!!';
   client1.writeFiles({ 't1.txt': 'This is new test1!!!!!!' });
 
   client1.run();
-  await waitForClientRun();
   client2.run();
-  await waitForClientRun();
 
   const c1Files = client1.readFiles();
   const c2Files = client2.readFiles();
@@ -76,7 +71,6 @@ test('should sync updates.', async () => {
   }
 });
 
-
 test('should sync deletes.', async () => {
   const files = {
     't1.txt': 'This is test1',
@@ -87,17 +81,13 @@ test('should sync deletes.', async () => {
   const client2 = getClient();
 
   client1.run();
-  await waitForClientRun();
   client2.run();
-  await waitForClientRun();
 
   delete files['t1.txt'];
   client1.deleteFiles(['t1.txt']);
 
   client1.run();
-  await waitForClientRun();
   client2.run();
-  await waitForClientRun();
 
   const c1Files = client1.readFiles();
   const c2Files = client2.readFiles();
