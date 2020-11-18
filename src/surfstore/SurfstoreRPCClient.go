@@ -105,11 +105,13 @@ func (surfClient *RPCClient) GetFileInfoMap(succ *bool, serverFileInfoMap *map[s
 	} else {
 		fmt.Println("connected for get info")
 	}
+
 	// perform the call
 	e = conn.Call("Server.GetFileInfoMap", succ, serverFileInfoMap)
 	if e != nil {
 		conn.Close()
 		fmt.Println("fail to call rpc getfileinfomap ")
+		fmt.Print(e)
 		return e
 	}
 

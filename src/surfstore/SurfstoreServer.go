@@ -1,8 +1,6 @@
 package surfstore
 
 import (
-	"errors"
-	"log"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -15,51 +13,38 @@ type Server struct {
 
 func (s *Server) GetFileInfoMap(succ *bool, serverFileInfoMap *map[string]FileMetaData) error {
 	// panic("todo")
-	if *succ {
-		e := s.MetaStore.GetFileInfoMap(succ, serverFileInfoMap)
-		if e != nil {
-			errors.New("Cannot get map")
-		}
-		return nil
-	} else {
-		return errors.New("Cannot find file")
+	err := s.MetaStore.GetFileInfoMap(succ, serverFileInfoMap)
+	if err != nil {
+		*succ = false
 	}
+	return err
 }
 
 func (s *Server) UpdateFile(fileMetaData *FileMetaData, latestVersion *int) error {
 	// panic("todo")
-	e := s.MetaStore.UpdateFile(fileMetaData, latestVersion)
-	if e != nil {
-		errors.New("Cannot update")
-	}
-	return nil
+	err := s.MetaStore.UpdateFile(fileMetaData, latestVersion)
+	return err
 }
 
 func (s *Server) GetBlock(blockHash string, blockData *Block) error {
 	// panic("todo")
-	e := s.BlockStore.GetBlock(blockHash, blockData)
-	if e != nil {
-		errors.New("Cannot get block")
-	}
-	return nil
+	err := s.BlockStore.GetBlock(blockHash, blockData)
+	return err
 }
 
 func (s *Server) PutBlock(blockData Block, succ *bool) error {
 	// panic("todo")
-	e := s.BlockStore.PutBlock(blockData, succ)
-	if e != nil {
-		errors.New("Cannot put block")
+	err := s.BlockStore.PutBlock(blockData, succ)
+	if err != nil {
+		*succ = false
 	}
-	return nil
+	return err
 }
 
 func (s *Server) HasBlocks(blockHashesIn []string, blockHashesOut *[]string) error {
 	// panic("todo")
-	e := s.BlockStore.HasBlocks(blockHashesIn, blockHashesOut)
-	if e != nil {
-		errors.New("Cannot get blocks")
-	}
-	return nil
+	err := s.BlockStore.HasBlocks(blockHashesIn, blockHashesOut)
+	return err
 }
 
 // This line guarantees all method for surfstore are implemented
@@ -80,18 +65,13 @@ func ServeSurfstoreServer(hostAddr string, surfstoreServer Server) error {
 
 	rpc.Register(&surfstoreServer)
 	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", hostAddr)
-	if e != nil {
-		log.Fatal("listen error:", e)
+	ln, err := net.Listen("tcp", hostAddr)
+	if err != nil {
+		return err
 	}
 
-	http.Serve(l, nil)
+	http.Serve(ln, nil)
 
-	// fmt.Println("Press enter key to end server")
-	// fmt.Scanln()
 	for {
-
 	}
-
-	return nil
 }
