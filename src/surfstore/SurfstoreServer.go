@@ -37,6 +37,11 @@ func (s *Server) PutBlock(blockData Block, succ *bool) error {
 	return err
 }
 
+func (s *Server) HasBlock(blockHash string, succ *bool) error {
+	err := s.BlockStore.HasBlock(blockHash, succ)
+	return err
+}
+
 func (s *Server) HasBlocks(blockHashesIn []string, blockHashesOut *[]string) error {
 	err := s.BlockStore.HasBlocks(blockHashesIn, blockHashesOut)
 	return err

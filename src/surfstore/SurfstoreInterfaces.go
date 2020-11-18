@@ -63,6 +63,9 @@ type BlockStoreInterface interface {
 	// Put a block
 	PutBlock(block Block, succ *bool) error
 
+	// Check if a certain block is alredy present on the server
+	HasBlock(blockHashesIn string, succ *bool) error
+
 	// Check if certain blocks are alredy present on the server
 	HasBlocks(blockHashesIn []string, blockHashesOut *[]string) error
 }

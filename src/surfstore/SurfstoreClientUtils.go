@@ -16,13 +16,12 @@ import (
 Implement the logic for a client syncing with the server here.
 */
 func ClientSync(client RPCClient) {
-	// panic("todo")
-
 	// ================================== create a map for old index.txt===============================
 	fileMetaMap := readIndexFile(client)
 
 	// =============================create map for local dir======================
 	fileMetaMap = updateFileMetaMapWithLocalFiles(client, fileMetaMap)
+	PrintMetaMap(fileMetaMap)
 
 	// ============================ Now idxMetaMap is updated; try to compare with server map ===============
 	dummyRPCParam := true
@@ -33,7 +32,7 @@ func ClientSync(client RPCClient) {
 
 	err := client.GetFileInfoMap(&dummyRPCParam, &remoteFileMetaMap)
 	if err != nil {
-		log.Fatal("Failed to get remote file meta map")
+		log.Fatalln("Failed to get remote file meta map")
 		panic(err)
 	}
 
@@ -59,33 +58,24 @@ func ClientSync(client RPCClient) {
 			uploadFile(client, localFileMeta)
 		}
 	}
-
-	// ???????????????????
-	// newserverfilemap := new(map[string]FileMetaData)
-	// succ := false
-	// err = client.GetFileInfoMap(&succ, newserverfilemap)
-	// if err != nil {
-	// 	errors.New("get map error")
-	// }
-
 	// ==================================Finally, Write into a index file=============================
 	writeIndexFile(client, fileMetaMap)
 }
 
-func uploadFile(client RPCClient, fileMeta *FileMetaData) {
+func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 	// divide into blocks
 	filename := fileMeta.Filename
 
 	if fileMeta.IsTombstone() {
-		var v int
-		client.UpdateFile(fileMeta, &v)
+		var latestVersion int
+		client.UpdateFile(fileMeta, &latestVersion)
 
-		return
+		return fileMeta.Version == latestVersion
 	}
 
 	file, err := os.Open(filepath.Join(client.BaseDir, filename))
 	if err != nil {
-		log.Fatal("Cannot open local file")
+		log.Fatalln("uploadFile: Failed to open file", filename)
 		panic(err)
 	}
 
@@ -101,7 +91,8 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) {
 		succ := false
 		err := client.PutBlock(block, &succ)
 		if succ == false || err != nil {
-			log.Println("Cannot put empty block to server")
+			log.Fatalln("uploadFile: Failed to put empty block to the server")
+			return false
 		}
 	} else {
 		for i := uint64(0); i < numBlocks; i++ {
@@ -114,25 +105,26 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) {
 			// if the error is nil -> get block succ -> no need
 			succ := false
 			client.HasBlock(block.Hash(), &succ)
-			if succ {
-				fmt.Println("found block and not need to upload")
-			} else {
-				//put block
+			if !succ {
 				succ := false
 				err := client.PutBlock(block, &succ)
 				if succ == false || err != nil {
-					log.Println("Cannot put block to server")
+					log.Fatalln("uploadFile: Failed to put block to server")
+					return false
 				}
 			}
 		}
 	}
 
-	var latestVersion int
+	latestVersion := -1
 	err = client.UpdateFile(fileMeta, &latestVersion)
 	// TODO: Handle the case when latestVersion != fileMeta.Version
 	if err != nil {
-		log.Fatal("Cannot update to server")
+		log.Fatalln(err)
+		return false
 	}
+
+	return fileMeta.Version == latestVersion
 }
 
 func readIndexFile(client RPCClient) map[string]*FileMetaData {
@@ -301,7 +293,7 @@ func writeIndexFile(client RPCClient, fileMetaMap map[string]*FileMetaData) {
 func downloadFileAndUpdateLocalFileMeta(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta *FileMetaData) {
 	var fileBlocks []Block
 
-	if len(remoteFileMeta.BlockHashList) != 1 || remoteFileMeta.BlockHashList[0] != "0" {
+	if !remoteFileMeta.IsTombstone() {
 		for _, blockHash := range remoteFileMeta.BlockHashList {
 			var block Block
 			client.GetBlock(blockHash, &block)
@@ -321,14 +313,13 @@ func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) {
 	} else {
 		file, err := os.OpenFile(filepath.Join(client.BaseDir, fileMeta.Filename), os.O_CREATE|os.O_RDWR, 0755)
 		if err != nil {
-			log.Println("file:" + fileMeta.Filename + "cant not create and open")
+			log.Fatalln("writeFile: Failed to open file:", fileMeta.Filename)
 		} else {
 			defer file.Close()
 			for _, block := range *blocks {
 				_, err := file.Write(block.Data)
 				if err != nil {
-					log.Println("file:" + fileMeta.Filename + "write error")
-					return
+					log.Fatalln("writeFile: Failed to write to file:", fileMeta.Filename)
 				}
 			}
 			file.Sync()
@@ -339,7 +330,7 @@ func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) {
 /*
 Helper function to print the contents of the metadata map.
 */
-func PrintMetaMap(metaMap map[string]FileMetaData) {
+func PrintMetaMap(metaMap map[string]*FileMetaData) {
 
 	fmt.Println("--------BEGIN PRINT MAP--------")
 

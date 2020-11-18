@@ -44,6 +44,7 @@ func (surfClient *RPCClient) HasBlock(blockHash string, succ *bool) error {
 	err = conn.Call("Server.HasBlock", blockHash, succ)
 	if err != nil {
 		log.Println("Client::HasBlock - Failed to check if server has block", blockHash)
+		log.Println(err)
 		return err
 	}
 
