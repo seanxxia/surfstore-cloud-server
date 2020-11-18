@@ -32,3 +32,6 @@
 # System Files
 .DS_Store
 Thumbs.db
+
+# dependencies
+/node_modules
