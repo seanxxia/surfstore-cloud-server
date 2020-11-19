@@ -19,8 +19,8 @@ function runServer(blockSize) {
   });
 
   const clients = [];
-  const getClient = (files) => {
-    const client = createClient(blockSize, files);
+  const getClient = (files, options) => {
+    const client = createClient(blockSize, files, options ?? {});
     clients.push(client);
     return client;
   };
@@ -37,17 +37,19 @@ function runServer(blockSize) {
 }
 module.exports.runServer = runServer;
 
-function createClient(blockSize, files) {
+function createClient(blockSize, files, options) {
   const dir = createTempDir(files ?? {});
   const execCommand = testingConfig['run-client-cmd']
     .replace('{ip:port}', `localhost:${testingConfig['server-port']}`)
     .replace('{basedir}', dir.name)
     .replace('{blocksize}', blockSize);
 
+  const { silent = true } = options;
+
   const run = () =>
     shell.exec(execCommand, {
+      silent,
       cwd: path.join(__dirname, '../../'),
-      silent: true,
       async: false,
     });
 
@@ -59,8 +61,8 @@ function createClient(blockSize, files) {
       shell.exec(
         execCommand,
         {
+          silent,
           cwd: path.join(__dirname, '../../'),
-          silent: true,
           async: true,
         },
         () => {
@@ -140,7 +142,6 @@ function createClient(blockSize, files) {
       }
 
       if (fileBlocks.length != hashList.length) {
-        console.log(fileBlocks.length, hashList.length);
         console.log(`File ${fileName}: hash list length does not equal to file blocks length`);
         return false;
       }
