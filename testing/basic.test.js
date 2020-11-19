@@ -69,7 +69,6 @@ test('should sync files (bytes).', async () => {
 
   expect(c1Files.length).toBe(c2Files.length);
   // Use `.contents` to access the content of file in buffer (bytes)
-  console.log(c1Files['video.mp4'].contents.length);
   expect(areBuffersEqual(c1Files['large.txt'].contents, c2Files['large.txt'].contents)).toBeTruthy();
   expect(areBuffersEqual(c1Files['video.mp4'].contents, c2Files['video.mp4'].contents)).toBeTruthy();
 });
