@@ -14,6 +14,10 @@ async function waitForServerStart() {
 module.exports.waitForServerStart = waitForServerStart;
 
 function areBuffersEqual(bufA, bufB) {
+  if (!(bufA instanceof Buffer) || !(bufB instanceof Buffer)) {
+    return false;
+  }
+
   const len = bufA.length;
   if (len !== bufB.length) {
     return false;

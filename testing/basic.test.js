@@ -1,5 +1,7 @@
+const fs = require('fs');
+const path = require('path');
 const { runServer } = require('./libs/server');
-const { waitForServerStart } = require('./libs/utils');
+const { waitForServerStart, areBuffersEqual } = require('./libs/utils');
 
 jest.setTimeout(100000);
 
@@ -36,9 +38,40 @@ test('should sync files.', async () => {
   for (const [fname, content] of Object.entries(files)) {
     expect(c1Files[fname]).toBeDefined();
     expect(c2Files[fname]).toBeDefined();
+    // Use `.content` to access the content of file in string
     expect(c1Files[fname].content).toBe(content);
     expect(c2Files[fname].content).toBe(content);
   }
+});
+
+test('should sync files (bytes).', async () => {
+  const files = {
+    'video.mp4': ({ copy }) => {
+      // Copy from file in dir "testing/fixture"
+      copy('video.mp4');
+    },
+    'large.txt': ({ write }) => {
+      // Write string (buffer) to file
+      for (let i = 0; i < 100; i++) {
+        write('ABC');
+      }
+    },
+  };
+
+  const client1 = getClient(files);
+  const client2 = getClient();
+
+  client1.run();
+  client2.run();
+
+  const c1Files = client1.readFiles();
+  const c2Files = client2.readFiles();
+
+  expect(c1Files.length).toBe(c2Files.length);
+  // Use `.contents` to access the content of file in buffer (bytes)
+  console.log(c1Files['video.mp4'].contents.length);
+  expect(areBuffersEqual(c1Files['large.txt'].contents, c2Files['large.txt'].contents)).toBeTruthy();
+  expect(areBuffersEqual(c1Files['video.mp4'].contents, c2Files['video.mp4'].contents)).toBeTruthy();
 });
 
 test('should sync updates.', async () => {

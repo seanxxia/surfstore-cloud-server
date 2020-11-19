@@ -90,7 +90,27 @@ function writeFilesToDir(dirname, files) {
 
   const build = (docs, prefix) => {
     for (const [name, content] of Object.entries(docs)) {
-      if (content instanceof Buffer || typeof content === 'string') {
+      if (content instanceof Function || typeof content === 'function') {
+        const fileName = getPath(...prefix, name);
+
+        let f = null;
+        const writeFunc = (data) => {
+          if (!f) {
+            f = fs.openSync(fileName, 'w');
+          }
+          fs.writeSync(f, data);
+        };
+        const copyFunc = (src) => {
+          if (f) {
+            throw new Error('Cannot use copy and write function together');
+          }
+          fs.copyFileSync(path.join(__dirname, '../fixture', src), fileName);
+        };
+        content({ write: writeFunc, copy: copyFunc });
+        if (f) {
+          fs.closeSync(f);
+        }
+      } else if (content instanceof Buffer || typeof content === 'string') {
         const fileName = getPath(...prefix, name);
         fs.writeFileSync(fileName, content);
       } else {
