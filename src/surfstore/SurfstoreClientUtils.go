@@ -159,7 +159,9 @@ func readIndexFile(client RPCClient) map[string]*FileMetaData {
 	for !isReaderEnded {
 		line, err := reader.ReadString('\n')
 		isReaderEnded = err == io.EOF
-
+		if err != nil && err != io.EOF {
+			panic(err)
+		}
 		if line == "" {
 			break
 		}
