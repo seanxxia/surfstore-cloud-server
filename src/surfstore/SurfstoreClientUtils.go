@@ -3,6 +3,7 @@ package surfstore
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math"
@@ -21,41 +22,51 @@ func ClientSync(client RPCClient) {
 
 	// =============================create map for local dir======================
 	fileMetaMap = updateFileMetaMapWithLocalFiles(client, fileMetaMap)
-	PrintMetaMap(fileMetaMap)
+	// PrintMetaMap(fileMetaMap)
 
 	// ============================ Now idxMetaMap is updated; try to compare with server map ===============
 	dummyRPCParam := true
 
-	// the idea is : not modify the server then download to local
-	// get server map
-	remoteFileMetaMap := make(map[string]FileMetaData)
-
-	err := client.GetFileInfoMap(&dummyRPCParam, &remoteFileMetaMap)
-	if err != nil {
-		log.Fatalln("Failed to get remote file meta map")
-		panic(err)
-	}
-
-	// working on existing files in server and local
-	for remoteFilename, remoteFileMeta := range remoteFileMetaMap {
-		if localFileMeta, ok := fileMetaMap[remoteFilename]; ok { // if server match local file
-			if localFileMeta.Version > remoteFileMeta.Version { // modify and upload newest file to server
-				uploadFile(client, localFileMeta)
-			} else {
-				downloadFileAndUpdateLocalFileMeta(client, localFileMeta, &remoteFileMeta)
-			}
-		} else {
-			// server file not find in local.
-			var localFileMeta FileMetaData
-			downloadFileAndUpdateLocalFileMeta(client, &localFileMeta, &remoteFileMeta)
-			fileMetaMap[remoteFilename] = &localFileMeta
+	// the idea is : if cannot update then download
+	retryMax := 3
+	for i := 0; i < retryMax; i++ {
+		// get server map
+		remoteFileMetaMap := make(map[string]FileMetaData)
+		err := client.GetFileInfoMap(&dummyRPCParam, &remoteFileMetaMap)
+		if err != nil {
+			log.Fatalln("Failed to get remote file meta map")
+			panic(err)
 		}
-	}
 
-	// working on files only on local -> upload
-	for localFilename, localFileMeta := range fileMetaMap {
-		if _, ok := remoteFileMetaMap[localFilename]; !ok {
-			uploadFile(client, localFileMeta)
+		isUploadFailed := false
+
+		// working on existing files in server and local
+		for remoteFilename, remoteFileMeta := range remoteFileMetaMap {
+			// if server match local file
+			if localFileMeta, ok := fileMetaMap[remoteFilename]; ok {
+				// modify and upload newest file to server
+				if localFileMeta.Version > remoteFileMeta.Version {
+					isUploadFailed = isUploadFailed || !uploadFile(client, localFileMeta)
+				} else {
+					downloadFileAndUpdateLocalFileMeta(client, localFileMeta, &remoteFileMeta)
+				}
+			} else {
+				// server file not find in local.
+				var localFileMeta FileMetaData
+				downloadFileAndUpdateLocalFileMeta(client, &localFileMeta, &remoteFileMeta)
+				fileMetaMap[remoteFilename] = &localFileMeta
+			}
+		}
+
+		// working on files only on local -> upload
+		for localFilename, localFileMeta := range fileMetaMap {
+			if _, ok := remoteFileMetaMap[localFilename]; !ok {
+				isUploadFailed = isUploadFailed || !uploadFile(client, localFileMeta)
+			}
+		}
+
+		if !isUploadFailed {
+			break
 		}
 	}
 	// ==================================Finally, Write into a index file=============================
@@ -143,9 +154,20 @@ func readIndexFile(client RPCClient) map[string]*FileMetaData {
 	fileMetaMap := make(map[string]*FileMetaData)
 
 	// read index file
-	scanner := bufio.NewScanner(indexFile)
-	for scanner.Scan() {
-		lineParts := strings.Split(scanner.Text(), ",")
+	reader := bufio.NewReader(indexFile)
+	isReaderEnded := false
+	for !isReaderEnded {
+		line, err := reader.ReadString('\n')
+		isReaderEnded = err == io.EOF
+		if err != nil && err != io.EOF {
+			panic(err)
+		}
+		if line == "" {
+			break
+		}
+
+		text := strings.TrimSuffix(line, "\n")
+		lineParts := strings.Split(text, ",")
 		if len(lineParts) == 3 {
 			filename := lineParts[0]
 			version, _ := strconv.Atoi(lineParts[1])
@@ -161,10 +183,6 @@ func readIndexFile(client RPCClient) map[string]*FileMetaData {
 		} else {
 			panic("Invalid index.txt")
 		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		panic(err)
 	}
 
 	return fileMetaMap
@@ -291,7 +309,6 @@ func writeIndexFile(client RPCClient, fileMetaMap map[string]*FileMetaData) {
 
 func downloadFileAndUpdateLocalFileMeta(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta *FileMetaData) {
 	var fileBlocks []Block
-
 	if !remoteFileMeta.IsTombstone() {
 		for _, blockHash := range remoteFileMeta.BlockHashList {
 			var block Block
@@ -299,7 +316,6 @@ func downloadFileAndUpdateLocalFileMeta(client RPCClient, localFileMeta *FileMet
 			fileBlocks = append(fileBlocks, block)
 		}
 	}
-
 	localFileMeta.Filename = remoteFileMeta.Filename
 	localFileMeta.Version = remoteFileMeta.Version
 	localFileMeta.BlockHashList = remoteFileMeta.BlockHashList
@@ -310,7 +326,7 @@ func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) {
 	if fileMeta.IsTombstone() {
 		os.Remove(filepath.Join(client.BaseDir, fileMeta.Filename))
 	} else {
-		file, err := os.OpenFile(filepath.Join(client.BaseDir, fileMeta.Filename), os.O_CREATE|os.O_RDWR, 0755)
+		file, err := os.Create(filepath.Join(client.BaseDir, fileMeta.Filename))
 		if err != nil {
 			log.Fatalln("writeFile: Failed to open file:", fileMeta.Filename, err)
 		} else {
@@ -322,6 +338,7 @@ func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) {
 				}
 			}
 			file.Sync()
+
 		}
 	}
 }

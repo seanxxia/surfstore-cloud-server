@@ -27,7 +27,7 @@ func (surfClient *RPCClient) GetBlock(blockHash string, block *Block) error {
 		return err
 	}
 
-	log.Println("Client::GetBlock - Block received", blockHash)
+	// log.Println("Client::GetBlock - Block received", blockHash)
 	return nil
 }
 
