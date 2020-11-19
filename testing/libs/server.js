@@ -101,7 +101,7 @@ function createClient(blockSize, files) {
       const [fileName, version, hashList] = line.split(',');
       return {
         fileName,
-        version,
+        version: parseInt(version),
         hashList: hashList.split(' ').map((h) => h.trim()),
       };
     });
@@ -145,7 +145,7 @@ function createClient(blockSize, files) {
         return false;
       }
 
-      for (const i in fileBlocks) {
+      for (let i = 0; i < fileBlocks.length; i++) {
         const hash = crypto.createHash('sha256').update(fileBlocks[i]).digest('hex');
         if (hash != hashList[i]) {
           console.log(`File ${fileName}: hash lists mismatch`);
