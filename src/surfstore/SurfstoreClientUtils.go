@@ -27,26 +27,26 @@ func ClientSync(client RPCClient) {
 	// ============================ Now idxMetaMap is updated; try to compare with server map ===============
 	dummyRPCParam := true
 
-	// the idea is : not modify the server then download to local
-	// get server map
-	remoteFileMetaMap := make(map[string]FileMetaData)
-
-	err := client.GetFileInfoMap(&dummyRPCParam, &remoteFileMetaMap)
-	if err != nil {
-		log.Fatalln("Failed to get remote file meta map")
-		panic(err)
-	}
-
-	// working on existing files in server and local
-	retryMax := 5
+	// the idea is : if cannot update then download
+	retryMax := 3
 	for i := 0; i < retryMax; i++ {
-		uploadFaided := false
+		// get server map
+		remoteFileMetaMap := make(map[string]FileMetaData)
+		err := client.GetFileInfoMap(&dummyRPCParam, &remoteFileMetaMap)
+		if err != nil {
+			log.Fatalln("Failed to get remote file meta map")
+			panic(err)
+		}
+
+		isUploadFailed := false
+
+		// working on existing files in server and local
 		for remoteFilename, remoteFileMeta := range remoteFileMetaMap {
-			if localFileMeta, ok := fileMetaMap[remoteFilename]; ok { // if server match local file
-				if localFileMeta.Version > remoteFileMeta.Version { // modify and upload newest file to server
-					if !uploadFile(client, localFileMeta) {
-						uploadFaided = true
-					}
+			// if server match local file
+			if localFileMeta, ok := fileMetaMap[remoteFilename]; ok {
+				// modify and upload newest file to server
+				if localFileMeta.Version > remoteFileMeta.Version {
+					isUploadFailed = (isUploadFailed || !uploadFile(client, localFileMeta))
 				} else {
 					downloadFileAndUpdateLocalFileMeta(client, localFileMeta, &remoteFileMeta)
 				}
@@ -57,19 +57,18 @@ func ClientSync(client RPCClient) {
 				fileMetaMap[remoteFilename] = &localFileMeta
 			}
 		}
-		if !uploadFaided {
+
+		// working on files only on local -> upload
+		for localFilename, localFileMeta := range fileMetaMap {
+			if _, ok := remoteFileMetaMap[localFilename]; !ok {
+				isUploadFailed = (isUploadFailed || !uploadFile(client, localFileMeta))
+			}
+		}
+
+		if !isUploadFailed {
 			break
 		}
 	}
-	// working on files only on local -> upload
-	for i := 0; i < retryMax; i++ {
-		for localFilename, localFileMeta := range fileMetaMap {
-			if _, ok := remoteFileMetaMap[localFilename]; !ok {
-				uploadFile(client, localFileMeta)
-			}
-		}
-	}
-
 	// ==================================Finally, Write into a index file=============================
 	writeIndexFile(client, fileMetaMap)
 }
@@ -304,7 +303,6 @@ func writeIndexFile(client RPCClient, fileMetaMap map[string]*FileMetaData) {
 
 func downloadFileAndUpdateLocalFileMeta(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta *FileMetaData) {
 	var fileBlocks []Block
-
 	if !remoteFileMeta.IsTombstone() {
 		for _, blockHash := range remoteFileMeta.BlockHashList {
 			var block Block
@@ -312,7 +310,6 @@ func downloadFileAndUpdateLocalFileMeta(client RPCClient, localFileMeta *FileMet
 			fileBlocks = append(fileBlocks, block)
 		}
 	}
-
 	localFileMeta.Filename = remoteFileMeta.Filename
 	localFileMeta.Version = remoteFileMeta.Version
 	localFileMeta.BlockHashList = remoteFileMeta.BlockHashList
@@ -323,7 +320,7 @@ func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) {
 	if fileMeta.IsTombstone() {
 		os.Remove(filepath.Join(client.BaseDir, fileMeta.Filename))
 	} else {
-		file, err := os.OpenFile(filepath.Join(client.BaseDir, fileMeta.Filename), os.O_CREATE|os.O_RDWR, 0755)
+		file, err := os.Create(filepath.Join(client.BaseDir, fileMeta.Filename))
 		if err != nil {
 			log.Fatalln("writeFile: Failed to open file:", fileMeta.Filename, err)
 		} else {
@@ -335,6 +332,7 @@ func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) {
 				}
 			}
 			file.Sync()
+
 		}
 	}
 }
