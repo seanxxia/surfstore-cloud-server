@@ -46,7 +46,7 @@ func ClientSync(client RPCClient) {
 			if localFileMeta, ok := fileMetaMap[remoteFilename]; ok {
 				// modify and upload newest file to server
 				if localFileMeta.Version > remoteFileMeta.Version {
-					isUploadFailed = (isUploadFailed || !uploadFile(client, localFileMeta))
+					isUploadFailed = isUploadFailed || !uploadFile(client, localFileMeta)
 				} else {
 					downloadFileAndUpdateLocalFileMeta(client, localFileMeta, &remoteFileMeta)
 				}
@@ -61,7 +61,7 @@ func ClientSync(client RPCClient) {
 		// working on files only on local -> upload
 		for localFilename, localFileMeta := range fileMetaMap {
 			if _, ok := remoteFileMetaMap[localFilename]; !ok {
-				isUploadFailed = (isUploadFailed || !uploadFile(client, localFileMeta))
+				isUploadFailed = isUploadFailed || !uploadFile(client, localFileMeta)
 			}
 		}
 
@@ -155,11 +155,15 @@ func readIndexFile(client RPCClient) map[string]*FileMetaData {
 
 	// read index file
 	reader := bufio.NewReader(indexFile)
-	for {
+	isReaderEnded := false
+	for !isReaderEnded {
 		line, err := reader.ReadString('\n')
-		if err != nil && err != io.EOF || line == "" {
+		isReaderEnded = err == io.EOF
+
+		if line == "" {
 			break
 		}
+
 		text := strings.TrimSuffix(line, "\n")
 		lineParts := strings.Split(text, ",")
 		if len(lineParts) == 3 {
