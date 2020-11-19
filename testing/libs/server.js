@@ -49,6 +49,21 @@ function createClient(blockSize, files) {
       async: false,
     });
 
+  const runAsync = () =>
+    new Promise((resolve) =>
+      shell.exec(
+        execCommand,
+        {
+          cwd: path.join(__dirname, '../../'),
+          silent: true,
+          async: true,
+        },
+        () => {
+          resolve();
+        }
+      )
+    );
+
   const cleanup = () => {
     shell.rm('-rf', path.join(dir.name, '*'));
     dir.removeCallback();
@@ -72,7 +87,7 @@ function createClient(blockSize, files) {
     return fileMap;
   };
 
-  return { run, writeFiles, readFiles, deleteFiles, cleanup };
+  return { run, runAsync, writeFiles, readFiles, deleteFiles, cleanup };
 }
 
 function createTempDir(files) {

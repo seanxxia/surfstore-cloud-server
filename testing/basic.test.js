@@ -44,6 +44,32 @@ test('should sync files.', async () => {
   }
 });
 
+test('should sync files (concurrent).', async () => {
+  const files = {
+    't1.txt': 'This is test1',
+    't2.txt': 'This is test2',
+  };
+
+  const client1 = getClient(files);
+  const client2 = getClient();
+
+  client1.run();
+
+  // Just a toy example
+  await Promise.all([client1.runAsync(), client2.runAsync()]);
+
+  const c1Files = client1.readFiles();
+  const c2Files = client2.readFiles();
+
+  expect(c1Files.length).toBe(c2Files.length);
+  for (const [fname, content] of Object.entries(files)) {
+    expect(c1Files[fname]).toBeDefined();
+    expect(c2Files[fname]).toBeDefined();
+    expect(c1Files[fname].content).toBe(content);
+    expect(c2Files[fname].content).toBe(content);
+  }
+});
+
 test('should sync files (bytes).', async () => {
   const files = {
     'video.mp4': ({ copy }) => {
