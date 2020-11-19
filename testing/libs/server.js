@@ -5,6 +5,7 @@ const shell = require('shelljs');
 const kill = require('kill-port');
 const mapFiles = require('map-files');
 
+const { sleep } = require('./utils');
 const { testing: testingConfig } = require('../../package.json');
 
 function runServer(blockSize) {
@@ -49,8 +50,11 @@ function createClient(blockSize, files) {
       async: false,
     });
 
-  const runAsync = () =>
-    new Promise((resolve) =>
+  const runAsync = async (delayMiliSeconds = -1) => {
+    if (delayMiliSeconds >= 0) {
+      await sleep(delayMiliSeconds);
+    }
+    return await new Promise((resolve) => {
       shell.exec(
         execCommand,
         {
@@ -61,8 +65,9 @@ function createClient(blockSize, files) {
         () => {
           resolve();
         }
-      )
-    );
+      );
+    });
+  };
 
   const cleanup = () => {
     shell.rm('-rf', path.join(dir.name, '*'));

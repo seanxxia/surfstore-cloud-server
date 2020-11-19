@@ -56,7 +56,10 @@ test('should sync files (concurrent).', async () => {
   client1.run();
 
   // Just a toy example
-  await Promise.all([client1.runAsync(), client2.runAsync()]);
+  await Promise.all([
+    client1.runAsync(),
+    client2.runAsync(500), // Delay starting the process after 500ms
+  ]);
 
   const c1Files = client1.readFiles();
   const c2Files = client2.readFiles();
