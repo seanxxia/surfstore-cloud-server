@@ -1,11 +1,12 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const tmp = require('tmp');
 const shell = require('shelljs');
 const kill = require('kill-port');
 const mapFiles = require('map-files');
-
 const { sleep } = require('./utils');
+
 const { testing: testingConfig } = require('../../package.json');
 
 function runServer(blockSize) {
@@ -92,7 +93,79 @@ function createClient(blockSize, files) {
     return fileMap;
   };
 
-  return { run, runAsync, writeFiles, readFiles, deleteFiles, cleanup };
+  const readIndexFile = () => {
+    const indexFileName = path.join(dir.name, 'index.txt');
+    const content = fs.readFileSync(indexFileName).toString();
+    const lines = content.trim().split('\n');
+    const fileMetas = lines.map((line) => {
+      const [fileName, version, hashList] = line.split(',');
+      return {
+        fileName,
+        version: parseInt(version),
+        hashList: hashList.split(' ').map((h) => h.trim()),
+      };
+    });
+
+    return fileMetas;
+  };
+
+  const isIndexFileHashesMatchLocalFileHashes = () => {
+    const index = readIndexFile();
+    const files = readFiles();
+
+    for (const fileName of Object.keys(index)) {
+      if (index[fileName].hashList.length === 0 && index[file].hashList[0] === '0') {
+        // tombstone record
+        delete index[fileName];
+      }
+    }
+
+    if (index.length !== Object.keys(files).length - 1) {
+      console.log(`Number of index file records does not equal to number of local files`);
+      return false;
+    }
+
+    for (const { fileName, hashList } of index) {
+      if (!files[fileName]) {
+        console.log(`File ${fileName}: does not exist in local storage`);
+        return false;
+      }
+
+      const fileBuffer = files[fileName].contents;
+      const fileBlocks = [];
+
+      for (let i = 0; i < fileBuffer.length; i += blockSize) {
+        const j = Math.min(i + blockSize, fileBuffer.length);
+        fileBlocks.push(fileBuffer.slice(i, j));
+      }
+
+      if (fileBlocks.length != hashList.length) {
+        console.log(fileBlocks.length, hashList.length);
+        console.log(`File ${fileName}: hash list length does not equal to file blocks length`);
+        return false;
+      }
+
+      for (let i = 0; i < fileBlocks.length; i++) {
+        const hash = crypto.createHash('sha256').update(fileBlocks[i]).digest('hex');
+        if (hash != hashList[i]) {
+          console.log(`File ${fileName}: hash lists mismatch`);
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  return {
+    run,
+    runAsync,
+    writeFiles,
+    readFiles,
+    deleteFiles,
+    cleanup,
+    readIndexFile,
+    isIndexFileHashesMatchLocalFileHashes,
+  };
 }
 
 function createTempDir(files) {
