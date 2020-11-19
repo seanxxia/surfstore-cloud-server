@@ -99,14 +99,20 @@ function createClient(blockSize, files, options) {
     const indexFileName = path.join(dir.name, 'index.txt');
     const content = fs.readFileSync(indexFileName).toString();
     const lines = content.trim().split('\n');
-    const fileMetas = lines.map((line) => {
-      const [fileName, version, hashList] = line.split(',');
-      return {
-        fileName,
-        version: parseInt(version),
-        hashList: hashList.split(' ').map((h) => h.trim()),
-      };
-    });
+    const fileMetas = lines
+      .map((line) => {
+        if (line === '') {
+          console.log('Index file has empty line');
+          return null;
+        }
+        const [fileName, version, hashList] = line.split(',');
+        return {
+          fileName,
+          version: parseInt(version),
+          hashList: hashList.split(' ').map((h) => h.trim()),
+        };
+      })
+      .filter((v) => v);
 
     return fileMetas;
   };
