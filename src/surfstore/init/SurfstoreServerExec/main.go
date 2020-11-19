@@ -7,5 +7,5 @@ import (
 
 func main() {
 	serverInstance := surfstore.NewSurfstoreServer()
-	log.Fatal(surfstore.ServeSurfstoreServer("localhost:8080", serverInstance))
+	log.Println(surfstore.ServeSurfstoreServer("localhost:8080", serverInstance))
 }

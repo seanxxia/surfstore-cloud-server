@@ -34,8 +34,8 @@ func ClientSync(client RPCClient) {
 		remoteFileMetaMap := make(map[string]FileMetaData)
 		err := client.GetFileInfoMap(&dummyRPCParam, &remoteFileMetaMap)
 		if err != nil {
-			log.Fatalln("Failed to get remote file meta map")
-			panic(err)
+			log.Println("Failed to get remote file meta map", err)
+			continue
 		}
 
 		isUploadFailed := false
@@ -86,8 +86,8 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 
 	file, err := os.Open(filepath.Join(client.BaseDir, filename))
 	if err != nil {
-		log.Fatalln("uploadFile: Failed to open file", filename)
-		panic(err)
+		log.Println("uploadFile: Failed to open file", filename, err)
+		return false
 	}
 
 	blockSize := uint64(client.BlockSize)
@@ -102,7 +102,7 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 		succ := false
 		err := client.PutBlock(block, &succ)
 		if succ == false || err != nil {
-			log.Fatalln("uploadFile: Failed to put empty block to the server")
+			log.Println("uploadFile: Failed to put empty block to the server")
 			return false
 		}
 	} else {
@@ -120,7 +120,7 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 				succ := false
 				err := client.PutBlock(block, &succ)
 				if succ == false || err != nil {
-					log.Fatalln("uploadFile: Failed to put block to server")
+					log.Println("uploadFile: Failed to put block to server")
 					return false
 				}
 			}
@@ -322,25 +322,28 @@ func downloadFileAndUpdateLocalFileMeta(client RPCClient, localFileMeta *FileMet
 	writeFile(client, localFileMeta, &fileBlocks)
 }
 
-func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) {
+func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) error {
 	if fileMeta.IsTombstone() {
 		os.Remove(filepath.Join(client.BaseDir, fileMeta.Filename))
 	} else {
 		file, err := os.Create(filepath.Join(client.BaseDir, fileMeta.Filename))
 		if err != nil {
-			log.Fatalln("writeFile: Failed to open file:", fileMeta.Filename, err)
-		} else {
-			defer file.Close()
-			for _, block := range *blocks {
-				_, err := file.Write(block.Data)
-				if err != nil {
-					log.Fatalln("writeFile: Failed to write to file:", fileMeta.Filename, err)
-				}
-			}
-			file.Sync()
-
+			log.Println("writeFile: Failed to open file:", fileMeta.Filename, err)
+			return err
 		}
+
+		defer file.Close()
+		for _, block := range *blocks {
+			_, err := file.Write(block.Data)
+			if err != nil {
+				log.Println("writeFile: Failed to write to file:", fileMeta.Filename, err)
+				return err
+			}
+		}
+		file.Sync()
 	}
+
+	return nil
 }
 
 /*
