@@ -162,7 +162,7 @@ test('should sync deletes.', async () => {
   }
 });
 
-test('should sync empty files', async () => {});
+test('should sync empty files', async () => { });
 
 test('should sync update to empty files', async () => {});
 
