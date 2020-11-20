@@ -308,12 +308,45 @@ func writeIndexFile(client RPCClient, fileMetaMap map[string]*FileMetaData) {
 }
 
 func downloadFileAndUpdateLocalFileMeta(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta *FileMetaData) {
+	// Get block map for remote
+	var BlockMap map[string]Block
+	for _, hash := range remoteFileMeta.BlockHashList {
+		var nilBlock Block
+		BlockMap[hash] = nilBlock
+	}
+	// update map with local blocks
+	file, err := os.Open(filepath.Join(client.BaseDir, localFileMeta.Filename))
+	if err != nil {
+		panic(err)
+	}
+	for i, hash := range localFileMeta.BlockHashList {
+		_, found := BlockMap[hash]
+		// update correnspoding block from local
+		if found && BlockMap[hash].Data == nil {
+			currentBlockSize := client.BlockSize
+			block := NewBlock(currentBlockSize)
+			// buffer := make([]byte, client.BlockSize)
+			_, err := file.ReadAt(block.Data, int64(i))
+			if err != nil {
+				panic(err)
+			}
+			BlockMap[hash] = block
+		}
+
+	}
+
 	var fileBlocks []Block
 	if !remoteFileMeta.IsTombstone() {
 		for _, blockHash := range remoteFileMeta.BlockHashList {
-			var block Block
-			client.GetBlock(blockHash, &block)
-			fileBlocks = append(fileBlocks, block)
+			if BlockMap[blockHash].Data != nil {
+				localblock := BlockMap[blockHash]
+				fileBlocks = append(fileBlocks, localblock)
+			} else {
+				var block Block
+				client.GetBlock(blockHash, &block)
+				fileBlocks = append(fileBlocks, block)
+			}
+
 		}
 	}
 	localFileMeta.Filename = remoteFileMeta.Filename
