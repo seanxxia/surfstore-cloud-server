@@ -203,32 +203,6 @@ test('should sync empty files', async () => {
   expect(client2.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
 });
 
-test('should sync empty files', async () => {
-  const files = {
-    't1.txt': '',
-    't2.txt': 'This is test2',
-  };
-
-  const client1 = getClient(files);
-  const client2 = getClient();
-
-  client1.run();
-  client2.run();
-
-  const c1Files = client1.readFiles();
-  const c2Files = client2.readFiles();
-
-  expect(c1Files.length).toBe(c2Files.length);
-  for (const [fname, content] of Object.entries(files)) {
-    expect(c1Files[fname]).toBeDefined();
-    expect(c2Files[fname]).toBeDefined();
-    expect(c1Files[fname].content).toBe(content);
-    expect(c2Files[fname].content).toBe(content);
-  }
-
-  expect(client1.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
-  expect(client2.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
-});
 
 test('should sync update to empty files', async () => {
   const files = {
