@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { runServer } = require('./libs/server');
-const { waitForServerStart, areBuffersEqual } = require('./libs/utils');
+const { waitForServerStart, areBuffersEqual, waitForFileUpload} = require('./libs/utils');
 
 let server;
 let getClient;
@@ -471,5 +471,39 @@ test('should sync same file with different size (concurrent).', async () => {
     'testing.txt': 1,
   };
   expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
+});
+
+test('should sync file with a correct version number and file while concurrently upload file', async () => {
+  const serverfile = {
+    'testing.txt': "I am in the server",
+  }
+  const client1 = getClient(serverfile);
+  client1.run();
+
+  const updatefile = {
+    'testing.txt': Buffer.alloc(1024 * 1024 , '1'),
+  };
+  client1.writeFiles({ 'testing.txt': updatefile['testing.txt'] });
+  const client2 = getClient();
+  // Client2 should download the old server texting.txt with the old version
+  await Promise.all([client1.runAsync(), client2.runAsync(200)]);
+
+  expect(client2).toHaveExactLocalFiles(serverfile);
+  expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+  let expectedFileVersions = {
+    'testing.txt': 1,
+  };
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
+
+  await waitForFileUpload()
+
+  // Client 2 should download the newest texting.txt with new version
+  client2.run();
+  expect(client2).toHaveExactLocalFiles(updatefile);
+  expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+  expectedFileVersions = {
+    'testing.txt': 2,
+  };
   expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 });

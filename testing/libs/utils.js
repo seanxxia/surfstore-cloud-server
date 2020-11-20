@@ -13,6 +13,11 @@ async function waitForServerStart() {
 }
 module.exports.waitForServerStart = waitForServerStart;
 
+async function waitForFileUpload() {
+  await sleep(2000);
+}
+module.exports.waitForFileUpload = waitForFileUpload;
+
 function areBuffersEqual(bufA, bufB) {
   if (!(bufA instanceof Buffer) || !(bufB instanceof Buffer)) {
     return false;
