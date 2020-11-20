@@ -90,6 +90,9 @@ function createClient(blockSize, files, options) {
     for (const fname in fileDirMap) {
       if (fs.lstatSync(path.join(dir.name, fname)).isFile()) {
         fileMap[fname] = fileDirMap[fname];
+        Object.defineProperty(fileMap[fname], 'contents', {
+          get: () => fs.readFileSync(path.join(dir.name, fname)),
+        });
       }
     }
     return fileMap;
@@ -118,15 +121,10 @@ function createClient(blockSize, files, options) {
   };
 
   const isIndexFileHashesMatchLocalFileHashes = () => {
-    const index = readIndexFile();
     const files = readFiles();
-
-    for (const fileName of Object.keys(index)) {
-      if (index[fileName].hashList.length === 0 && index[file].hashList[0] === '0') {
-        // tombstone record
-        delete index[fileName];
-      }
-    }
+    const index = readIndexFile().filter(
+      (fileMeta) => !(fileMeta.hashList.length === 1 && fileMeta.hashList[0] === '0')
+    );
 
     if (index.length !== Object.keys(files).length - 1) {
       console.log(`Number of index file records does not equal to number of local files`);
@@ -172,6 +170,7 @@ function createClient(blockSize, files, options) {
     cleanup,
     readIndexFile,
     isIndexFileHashesMatchLocalFileHashes,
+    dir: dir.name,
   };
 }
 

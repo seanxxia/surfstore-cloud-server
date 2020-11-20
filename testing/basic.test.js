@@ -42,6 +42,9 @@ test('should sync files.', async () => {
     expect(c1Files[fname].content).toBe(content);
     expect(c2Files[fname].content).toBe(content);
   }
+
+  expect(client1.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
+  expect(client2.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
 });
 
 test('should sync files (concurrent).', async () => {
@@ -71,6 +74,9 @@ test('should sync files (concurrent).', async () => {
     expect(c1Files[fname].content).toBe(content);
     expect(c2Files[fname].content).toBe(content);
   }
+
+  expect(client1.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
+  expect(client2.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
 });
 
 test('should sync files (bytes).', async () => {
@@ -100,6 +106,9 @@ test('should sync files (bytes).', async () => {
   // Use `.contents` to access the content of file in buffer (bytes)
   expect(areBuffersEqual(c1Files['large.txt'].contents, c2Files['large.txt'].contents)).toBeTruthy();
   expect(areBuffersEqual(c1Files['video.mp4'].contents, c2Files['video.mp4'].contents)).toBeTruthy();
+
+  expect(client1.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
+  expect(client2.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
 });
 
 test('should sync updates.', async () => {
@@ -130,6 +139,9 @@ test('should sync updates.', async () => {
     expect(c1Files[fname].content).toBe(content);
     expect(c2Files[fname].content).toBe(content);
   }
+
+  expect(client1.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
+  expect(client2.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
 });
 
 test('should sync deletes.', async () => {
@@ -160,20 +172,22 @@ test('should sync deletes.', async () => {
     expect(c1Files[fname].content).toBe(content);
     expect(c2Files[fname].content).toBe(content);
   }
+
+  expect(client1.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
+  expect(client2.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
 });
 
-test('should sync empty files', async () => { });
+test('should sync empty files', async () => {});
 
 test('should sync update to empty files', async () => {});
 
 test('should sync append/delete content from file', async () => {});
 
-test.only('should sync create delete recreate delete recreate.', async () => {
+test.skip('should sync create delete recreate delete recreate.', async () => {
   const files = {
     't1.txt': 'This is test1',
     't2.txt': 'This is test2',
   };
-  
 
   const client1 = getClient(files);
   const client2 = getClient();
@@ -204,10 +218,10 @@ test.only('should sync create delete recreate delete recreate.', async () => {
     expect(c2Files[fname].content).toBe(content);
   }
 
-  //c2 delete
+  // c2 delete
   delete files['t1.txt'];
   client2.deleteFiles(['t1.txt']);
-  
+
   client2.run();
   client1.run();
 
@@ -221,17 +235,18 @@ test.only('should sync create delete recreate delete recreate.', async () => {
     expect(c1Files[fname].content).toBe(content);
     expect(c2Files[fname].content).toBe(content);
   }
+  expect(client1.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
+  expect(client2.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
 
   // c1 recreate
   files['t1.txt'] = 'This is new test1!!!!!!';
   client1.writeFiles({ 't1.txt': 'This is new test1!!!!!!' });
-  
+
   client1.run();
   client2.run();
 
   c1Files = client1.readFiles();
   c2Files = client2.readFiles();
-  Object.keys(c1Files) 
   expect(c1Files.length).toBe(c2Files.length);
   for (const [fname, content] of Object.entries(files)) {
     expect(c1Files[fname]).toBeDefined();
@@ -239,34 +254,28 @@ test.only('should sync create delete recreate delete recreate.', async () => {
     expect(c1Files[fname].content).toBe(content);
     expect(c2Files[fname].content).toBe(content);
   }
-  
-
+  expect(client1.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
+  expect(client2.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
 });
 
-test('should sync mixture with two clients: update, delete files', async () => {
+test('should sync mixture with two clients: update, delete files', async () => {});
 
-});
-
-test('should sync mixture with three clients', async () => {
-});
+test('should sync mixture with three clients', async () => {});
 
 test('should sync same file with different size (concurrent).', async () => {
   const files1 = {
-    'testing.txt': Buffer.alloc(1024 * 1024 * 1024, '1')
+    'testing.txt': Buffer.alloc(1024 * 1024 * 1024, '1'),
   };
 
   const files2 = {
-    'testing.txt': Buffer.alloc(10, '2')
+    'testing.txt': Buffer.alloc(10, '2'),
   };
 
   const client1 = getClient(files1);
   const client2 = getClient(files2);
 
   // Just a toy example
-  await Promise.all([
-    client1.runAsync(),
-    client2.runAsync(10), // Delay starting the process after 500ms
-  ]);
+  await Promise.all([client1.runAsync(), client2.runAsync(10)]);
 
   const c1Files = client1.readFiles();
   const c2Files = client2.readFiles();
@@ -274,5 +283,7 @@ test('should sync same file with different size (concurrent).', async () => {
   expect(c1Files.length).toBe(c2Files.length);
   // expect(areBuffersEqual(c1Files['testing.txt'].contents, c2Files['testing.txt'].contents)).toBeTruthy();
   expect(areBuffersEqual(c1Files['testing.txt'].contents, files2['testing.txt'])).toBeTruthy();
-});
 
+  expect(client1.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
+  expect(client2.isIndexFileHashesMatchLocalFileHashes()).toBeTruthy();
+});
