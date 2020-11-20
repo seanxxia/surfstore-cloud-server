@@ -204,7 +204,7 @@ test('should sync update to empty files', async () => {
   client2.run();
 
   files['t1.txt'] = '';
-  client1.writeFiles({ 't1.txt': '' });
+  client1.writeFiles({ 't1.txt': files['t1.txt'] });
 
   client1.run();
   client2.run();
@@ -258,6 +258,40 @@ test('should sync append/delete content from file', async () => {
   expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 });
 
+test('should sync updates with the same version number: first update wins.', async () => {
+  const files = {
+    't1.txt': 'This is test1',
+    't2.txt': 'This is test2',
+  };
+
+  const client1 = getClient(files);
+  const client2 = getClient();
+
+  client1.run();
+  client2.run();
+
+  client1.writeFiles({ 't1.txt': 'This is new test1 from client1' });
+  client2.writeFiles({ 't1.txt': 'This is new test1 from client2' });
+
+  // Client1 should win the update
+  // And client2 should fetch the remote update (client1's update) when failing to upload its update
+  files['t1.txt'] = 'This is new test1 from client1';
+  client1.run();
+  client2.run();
+
+  expect(client1).toHaveExactLocalFiles(files);
+  expect(client2).toHaveExactLocalFiles(files);
+  expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
+  expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+  const expectedFileVersions = {
+    't1.txt': 2,
+    't2.txt': 1,
+  };
+  expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
+});
+
 test('should sync create delete recreate delete recreate.', async () => {
   const files = {
     't1.txt': 'This is test1',
@@ -278,7 +312,7 @@ test('should sync create delete recreate delete recreate.', async () => {
 
   // c1 recreate
   files['t1.txt'] = 'This is new test1!!!!!!';
-  client1.writeFiles({ 't1.txt': 'This is new test1!!!!!!' });
+  client1.writeFiles({ 't1.txt': files['t1.txt'] });
   client1.run();
   client2.run();
 
@@ -317,7 +351,7 @@ test('should sync create delete recreate delete recreate.', async () => {
 
   // c1 recreate
   files['t1.txt'] = 'This is new test1!!!!!!';
-  client1.writeFiles({ 't1.txt': 'This is new test1!!!!!!' });
+  client1.writeFiles({ 't1.txt': files['t1.txt'] });
 
   client1.run();
   client2.run();
@@ -350,7 +384,7 @@ test('should sync mixture with two clients: update, delete and recreate files', 
 
   // update t1.txt from c1
   files['t1.txt'] = 'This is new test1!!!!!!';
-  client1.writeFiles({ 't1.txt': 'This is new test1!!!!!!' });
+  client1.writeFiles({ 't1.txt': files['t1.txt'] });
 
   client1.run();
   client2.run();
@@ -363,7 +397,7 @@ test('should sync mixture with two clients: update, delete and recreate files', 
 
   // recreate t1.txt from c1
   files['t1.txt'] = 'Recreate test1!!!!!!';
-  client1.writeFiles({ 't1.txt': 'Recreate test1!!!!!!' });
+  client1.writeFiles({ 't1.txt': files['t1.txt'] });
   client1.run();
   client2.run();
 
@@ -460,7 +494,7 @@ test('should sync same file with different size (concurrent).', async () => {
   const client2 = getClient(files2);
 
   // Client2 should win the update
-  // And client1 should fetch the remote (client2's) version when failing to update its version
+  // And client1 should fetch the remote update (client2's update) when failing to upload its update
   await Promise.all([client1.runAsync(), client2.runAsync(10)]);
 
   expect(client1).toHaveExactLocalFiles(files2);
