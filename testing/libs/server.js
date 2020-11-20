@@ -138,7 +138,7 @@ function createClient(blockSize, files, options) {
       }
 
       const fileBuffer = files[fileName].contents;
-      const fileBlocks = [];
+      const fileBlocks = fileBuffer.length > 0 ? [] : [Buffer.alloc(0)];
 
       for (let i = 0; i < fileBuffer.length; i += blockSize) {
         const j = Math.min(i + blockSize, fileBuffer.length);
