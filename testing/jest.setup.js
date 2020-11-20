@@ -110,6 +110,34 @@ expect.extend({
       };
     }
   },
+
+  toHaveIndexFileVersions(receivedClient, expectedFileVersions) {
+    const clientIndex = receivedClient.readIndexFile();
+
+    for (const [fileName, expectedVersion] of Object.entries(expectedFileVersions)) {
+      if (!clientIndex[fileName]) {
+        return {
+          message: () => `File ${fileName} does not exist in client's index.txt`,
+          pass: false,
+        };
+      }
+
+      if (clientIndex[fileName].version !== expectedVersion) {
+        return {
+          message: () =>
+            `File version mismatch ${fileName}\n` +
+            `Expected file version: ${this.utils.printExpected(expectedVersion)}\n` +
+            `Received file version: ${this.utils.printReceived(clientIndex[fileName].version)}`,
+          pass: false,
+        };
+      }
+    }
+
+    return {
+      message: () => `Client's index.txt has expected file versions`,
+      pass: true,
+    };
+  },
 });
 
 function buildFilesFromFileMap(docs, prefix) {

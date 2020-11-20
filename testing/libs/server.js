@@ -115,14 +115,18 @@ function createClient(blockSize, files, options) {
           hashList: hashList.split(' ').map((h) => h.trim()),
         };
       })
-      .filter((v) => v);
+      .filter((v) => v)
+      .reduce((prev, { fileName, version, hashList }) => {
+        prev[fileName] = { fileName, version, hashList };
+        return prev;
+      }, {});
 
     return fileMetas;
   };
 
   const isIndexFileHashesMatchLocalFileHashes = () => {
     const files = readFiles();
-    const index = readIndexFile().filter(
+    const index = Object.values(readIndexFile()).filter(
       (fileMeta) => !(fileMeta.hashList.length === 1 && fileMeta.hashList[0] === '0')
     );
 

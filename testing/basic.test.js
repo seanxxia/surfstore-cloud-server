@@ -33,6 +33,13 @@ test('should sync files.', async () => {
   expect(client2).toHaveExactLocalFiles(files);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+  const expectedFileVersions = {
+    't1.txt': 1,
+    't2.txt': 1,
+  };
+  expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 });
 
 test('should sync files (concurrent).', async () => {
@@ -56,6 +63,13 @@ test('should sync files (concurrent).', async () => {
   expect(client2).toHaveExactLocalFiles(files);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+  const expectedFileVersions = {
+    't1.txt': 1,
+    't2.txt': 1,
+  };
+  expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 });
 
 test('should sync files (bytes).', async () => {
@@ -82,6 +96,13 @@ test('should sync files (bytes).', async () => {
   expect(client2).toHaveExactLocalFiles(files);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+  const expectedFileVersions = {
+    'video.mp4': 1,
+    'large.txt': 1,
+  };
+  expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 });
 
 test('should sync updates.', async () => {
@@ -106,6 +127,13 @@ test('should sync updates.', async () => {
   expect(client2).toHaveExactLocalFiles(files);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+  const expectedFileVersions = {
+    't1.txt': 2,
+    't2.txt': 1,
+  };
+  expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 });
 
 test('should sync deletes.', async () => {
@@ -130,6 +158,13 @@ test('should sync deletes.', async () => {
   expect(client2).toHaveExactLocalFiles(files);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+  const expectedFileVersions = {
+    't1.txt': 2,
+    't2.txt': 1,
+  };
+  expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 });
 
 test('should sync empty files', async () => {
@@ -147,6 +182,13 @@ test('should sync empty files', async () => {
   expect(client2).toHaveExactLocalFiles(files);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+  const expectedFileVersions = {
+    't1.txt': 1,
+    't2.txt': 1,
+  };
+  expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 });
 
 test('should sync update to empty files', async () => {
@@ -171,6 +213,13 @@ test('should sync update to empty files', async () => {
   expect(client2).toHaveExactLocalFiles(files);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+  const expectedFileVersions = {
+    't1.txt': 2,
+    't2.txt': 1,
+  };
+  expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 });
 
 test('should sync append/delete content from file', async () => {
@@ -200,6 +249,13 @@ test('should sync append/delete content from file', async () => {
   expect(client2).toHaveExactLocalFiles(files);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+  const expectedFileVersions = {
+    't1.txt': 2,
+    't2.txt': 2,
+  };
+  expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 });
 
 test('should sync create delete recreate delete recreate.', async () => {
@@ -230,6 +286,14 @@ test('should sync create delete recreate delete recreate.', async () => {
   expect(client2).toHaveExactLocalFiles(files);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+  expect(client1).toHaveIndexFileVersions({
+    't1.txt': 3,
+    't2.txt': 1,
+  });
+  expect(client2).toHaveIndexFileVersions({
+    't1.txt': 3,
+    't2.txt': 1,
+  });
 
   // c2 delete
   delete files['t1.txt'];
@@ -238,13 +302,18 @@ test('should sync create delete recreate delete recreate.', async () => {
   client2.run();
   client1.run();
 
-  c1Files = client1.readFiles();
-  c2Files = client2.readFiles();
-
   expect(client1).toHaveExactLocalFiles(files);
   expect(client2).toHaveExactLocalFiles(files);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+  expect(client1).toHaveIndexFileVersions({
+    't1.txt': 4,
+    't2.txt': 1,
+  });
+  expect(client2).toHaveIndexFileVersions({
+    't1.txt': 4,
+    't2.txt': 1,
+  });
 
   // c1 recreate
   files['t1.txt'] = 'This is new test1!!!!!!';
@@ -257,6 +326,14 @@ test('should sync create delete recreate delete recreate.', async () => {
   expect(client2).toHaveExactLocalFiles(files);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+  expect(client1).toHaveIndexFileVersions({
+    't1.txt': 5,
+    't2.txt': 1,
+  });
+  expect(client2).toHaveIndexFileVersions({
+    't1.txt': 5,
+    't2.txt': 1,
+  });
 });
 
 test('should sync mixture with two clients: update, delete and recreate files', async () => {
@@ -266,7 +343,6 @@ test('should sync mixture with two clients: update, delete and recreate files', 
   };
 
   const client1 = getClient(files);
-
   const client2 = getClient();
 
   client1.run();
@@ -295,6 +371,12 @@ test('should sync mixture with two clients: update, delete and recreate files', 
   expect(client2).toHaveExactLocalFiles(files);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+  const expectedFileVersions = {
+    't1.txt': 4,
+    't2.txt': 1,
+  };
+  expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 });
 
 test('should sync mixture with three clients', async () => {
@@ -336,6 +418,13 @@ test('should sync mixture with three clients', async () => {
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client3).toHaveIndexFileHashesMatchLocalFileHashes();
+  const expectedFileVersions1 = {
+    't1.txt': 3,
+    't2.txt': 1,
+  };
+  expect(client1).toHaveIndexFileVersions(expectedFileVersions1);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions1);
+  expect(client3).toHaveIndexFileVersions(expectedFileVersions1);
 
   // update t1.txt from c3
   files3['t1.txt'] = 'This is new test1 in c3!!!!!!';
@@ -350,6 +439,12 @@ test('should sync mixture with three clients', async () => {
   expect(client3).toHaveExactLocalFiles(files3);
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client3).toHaveIndexFileHashesMatchLocalFileHashes();
+  const expectedFileVersions2 = {
+    't1.txt': 4,
+    't2.txt': 2,
+  };
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions2);
+  expect(client3).toHaveIndexFileVersions(expectedFileVersions2);
 });
 
 test('should sync same file with different size (concurrent).', async () => {
@@ -372,4 +467,9 @@ test('should sync same file with different size (concurrent).', async () => {
   expect(client2).toHaveExactLocalFiles(files2);
   expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
   expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+  const expectedFileVersions = {
+    'testing.txt': 1,
+  };
+  expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+  expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 });
