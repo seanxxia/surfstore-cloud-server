@@ -127,14 +127,12 @@ function createClient(blockSize, files, options) {
     );
 
     if (index.length !== Object.keys(files).length - 1) {
-      console.log(`Number of index file records does not equal to number of local files`);
-      return false;
+      return `Number of index file records does not equal to number of local files`;
     }
 
     for (const { fileName, hashList } of index) {
       if (!files[fileName]) {
-        console.log(`File ${fileName}: does not exist in local storage`);
-        return false;
+        return `File ${fileName}: does not exist in local storage`;
       }
 
       const fileBuffer = files[fileName].contents;
@@ -146,19 +144,17 @@ function createClient(blockSize, files, options) {
       }
 
       if (fileBlocks.length != hashList.length) {
-        console.log(`File ${fileName}: hash list length does not equal to file blocks length`);
-        return false;
+        return `File ${fileName}: hash list length does not equal to file blocks length`;
       }
 
       for (let i = 0; i < fileBlocks.length; i++) {
         const hash = crypto.createHash('sha256').update(fileBlocks[i]).digest('hex');
         if (hash != hashList[i]) {
-          console.log(`File ${fileName}: hash lists mismatch`);
-          return false;
+          return `File ${fileName}: hash lists mismatch`;
         }
       }
     }
-    return true;
+    return null;
   };
 
   return {
