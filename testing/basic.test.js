@@ -496,8 +496,6 @@ test('should sync file with a correct version number and file while concurrently
   };
   expect(client2).toHaveIndexFileVersions(expectedFileVersions);
 
-  await waitForFileUpload()
-
   // Client 2 should download the newest texting.txt with new version
   client2.run();
   expect(client2).toHaveExactLocalFiles(updatefile);
