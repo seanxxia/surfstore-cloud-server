@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -90,10 +89,14 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 		return false
 	}
 
-	blockSize := uint64(client.BlockSize)
+	blockSize := client.BlockSize
 	fileInfo, _ := file.Stat()
 	fileSize := fileInfo.Size()
-	numBlocks := uint64(math.Ceil(float64(fileSize) / float64(blockSize)))
+	numBlocks := fileSize / int64(blockSize)
+	if fileSize%int64(blockSize) != 0 {
+		numBlocks++
+	}
+
 	if numBlocks == 0 {
 		// for empty file
 		blockBuffer := make([]byte, 0)
@@ -106,8 +109,15 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 			return false
 		}
 	} else {
-		for i := uint64(0); i < numBlocks; i++ {
-			currentBlockSize := int(math.Min(float64(blockSize), float64(fileSize-int64(i*blockSize))))
+		for i := int64(0); i < numBlocks; i++ {
+			currentBlockOffset := i * int64(blockSize)
+			var currentBlockSize int
+			if blockSize < int(fileSize-currentBlockOffset) {
+				currentBlockSize = blockSize
+			} else {
+				currentBlockSize = int(fileSize - currentBlockOffset)
+			}
+
 			block := NewBlock(currentBlockSize)
 			file.Read(block.Data)
 
@@ -258,8 +268,11 @@ func getLocalFileHashBlockListMap(client RPCClient) map[string][]string {
 
 		// divide into blocks
 		fileSize := fileInfo.Size()
-		blockSize := uint64(client.BlockSize)
-		numBlocks := uint64(math.Ceil(float64(fileSize) / float64(blockSize)))
+		blockSize := client.BlockSize
+		numBlocks := fileSize / int64(blockSize)
+		if fileSize%int64(blockSize) != 0 {
+			numBlocks++
+		}
 
 		var blockHashList []string
 		// for empty file
@@ -269,8 +282,15 @@ func getLocalFileHashBlockListMap(client RPCClient) map[string][]string {
 			blockHashList = append(blockHashList, block.Hash())
 		}
 
-		for i := uint64(0); i < numBlocks; i++ {
-			currentBlockSize := int(math.Min(float64(blockSize), float64(fileSize-int64(i*blockSize))))
+		for i := int64(0); i < numBlocks; i++ {
+			currentBlockOffset := i * int64(blockSize)
+			var currentBlockSize int
+			if blockSize < int(fileSize-currentBlockOffset) {
+				currentBlockSize = blockSize
+			} else {
+				currentBlockSize = int(fileSize - currentBlockOffset)
+			}
+
 			block := NewBlock(currentBlockSize)
 
 			file.Read(block.Data)
@@ -347,11 +367,10 @@ func downloadFile(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta 
 
 				// divide into blocks
 				fileSize := fileInfo.Size()
-				blockSize := uint64(client.BlockSize)
-				numBlocks := uint64(math.Ceil(float64(fileSize) / float64(blockSize)))
+				blockSize := client.BlockSize
 
 				// for empty file
-				if numBlocks == 0 {
+				if len(localFileMeta.BlockHashList) == 0 {
 					// write to hash
 					localBlock := NewBlock(0)
 
@@ -362,15 +381,23 @@ func downloadFile(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta 
 					}
 				}
 
-				for i := uint64(0); i < numBlocks; i++ {
-					currentBlockSize := int(math.Min(float64(blockSize), float64(fileSize-int64(i*blockSize))))
-					localBlock := NewBlock(currentBlockSize)
-					file.Read(localBlock.Data)
-
-					blockHash := localBlock.Hash()
-					block, found := blockMap[blockHash]
+				for i, localBlockHash := range localFileMeta.BlockHashList {
+					block, found := blockMap[localBlockHash]
 					if found && block == nil {
-						blockMap[blockHash] = &localBlock
+						currentBlockOffset := int64(i) * int64(blockSize)
+						var currentBlockSize int
+						if blockSize < int(fileSize-currentBlockOffset) {
+							currentBlockSize = blockSize
+						} else {
+							currentBlockSize = int(fileSize - currentBlockOffset)
+						}
+
+						localBlock := NewBlock(currentBlockSize)
+						n, err := file.ReadAt(localBlock.Data, currentBlockOffset)
+						if n != currentBlockSize {
+							log.Panicln(n, err)
+						}
+						blockMap[localBlockHash] = &localBlock
 					}
 				}
 			}
