@@ -4,10 +4,6 @@ const { waitForServerStart } = require('./libs/utils');
 <<<<<<< Updated upstream
 const blockSizes = [16, 1024, 4096];
 // const blockSizes = [16, 1024, 4096, 8192];
-=======
-// const blockSizes = [16, 1024, 4096];
-const blockSizes = [4096, 8192];
->>>>>>> Stashed changes
 
 for (const blockSize of blockSizes) {
   describe(`Block size = ${blockSize}`, () => {
