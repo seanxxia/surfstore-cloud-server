@@ -27,9 +27,8 @@ for (const blockSize of blockSizes) {
         },
         'large.txt': ({ write }) => {
           // Write string (buffer) to file
-          for (let i = 0; i < 100; i++) {
-            write(Buffer.alloc(1024 * 1024, 'a'));
-          }
+          write(Buffer.alloc(1024 * 1024 * 16, 'a'));
+          write(Buffer.alloc(1024 * 1024 * 16, 'a'));
         },
       };
 
@@ -90,7 +89,7 @@ for (const blockSize of blockSizes) {
 
     test('should sync same file with different size (concurrent).', async () => {
       const files1 = {
-        'testing.txt': Buffer.alloc(1024 * 1024 * 256, '1'),
+        'testing.txt': Buffer.alloc(1024 * 1024 * 64, '1'),
       };
 
       const files2 = {
@@ -102,7 +101,7 @@ for (const blockSize of blockSizes) {
 
       // Client2 should win the update
       // And client1 should fetch the remote update (client2's update) when failing to upload its update
-      await Promise.all([client1.runAsync(), client2.runAsync(200)]);
+      await Promise.all([client1.runAsync(), client2.runAsync(1200)]);
 
       expect(client1).toHaveExactLocalFiles(files2);
       expect(client2).toHaveExactLocalFiles(files2);
@@ -123,13 +122,13 @@ for (const blockSize of blockSizes) {
       client1.run();
 
       const updatefile = {
-        'testing.txt': Buffer.alloc(1024 * 1024 * 256, '1'),
+        'testing.txt': Buffer.alloc(1024 * 1024 * 64, '1'),
       };
       client1.writeFiles({ 'testing.txt': updatefile['testing.txt'] });
 
       const client2 = getClient();
       // Client2 should download the old server texting.txt with the old version
-      await Promise.all([client1.runAsync(), client2.runAsync(200)]);
+      await Promise.all([client1.runAsync(), client2.runAsync(1200)]);
 
       expect(client2).toHaveExactLocalFiles(serverfile);
       expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
