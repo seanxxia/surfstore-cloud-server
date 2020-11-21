@@ -51,7 +51,6 @@ func ClientSync(client RPCClient) {
 					downloadFileAndUpdateLocalFileMeta(client, localFileMeta, &remoteFileMeta)
 				}
 			} else {
-				// server file not find in local.
 				var localFileMeta FileMetaData
 				downloadFileAndUpdateLocalFileMeta(client, &localFileMeta, &remoteFileMeta)
 				fileMetaMap[remoteFilename] = &localFileMeta
@@ -308,39 +307,57 @@ func writeIndexFile(client RPCClient, fileMetaMap map[string]*FileMetaData) {
 }
 
 func downloadFileAndUpdateLocalFileMeta(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta *FileMetaData) {
-	// Get block map for remote
-	var BlockMap map[string]Block
-	for _, hash := range remoteFileMeta.BlockHashList {
-		var nilBlock Block
-		BlockMap[hash] = nilBlock
-	}
-	// update map with local blocks
-	file, err := os.Open(filepath.Join(client.BaseDir, localFileMeta.Filename))
-	if err != nil {
-		panic(err)
-	}
-	for i, hash := range localFileMeta.BlockHashList {
-		_, found := BlockMap[hash]
-		// update correnspoding block from local
-		if found && BlockMap[hash].Data == nil {
-			currentBlockSize := client.BlockSize
-			block := NewBlock(currentBlockSize)
-			// buffer := make([]byte, client.BlockSize)
-			_, err := file.ReadAt(block.Data, int64(i))
-			if err != nil {
-				panic(err)
-			}
-			BlockMap[hash] = block
-		}
-
-	}
 
 	var fileBlocks []Block
 	if !remoteFileMeta.IsTombstone() {
+		// Get block map for remote
+		BlockMap := make(map[string]Block)
+		for _, hash := range remoteFileMeta.BlockHashList {
+			var nilBlock Block
+			BlockMap[hash] = nilBlock
+		}
+		// update map with local blocks with existing files
+		localFileName := localFileMeta.Filename
+		if localFileName != "" && !localFileMeta.IsTombstone() {
+			file, err := os.Open(filepath.Join(client.BaseDir, localFileMeta.Filename))
+			if err != nil {
+				panic(err)
+			}
+			fileInfo, err := file.Stat()
+			if err != nil {
+				panic(err)
+			}
+			// divide into blocks
+			fileSize := fileInfo.Size()
+			blockSize := uint64(client.BlockSize)
+			numBlocks := uint64(math.Ceil(float64(fileSize) / float64(blockSize)))
+
+			// for empty file
+			if numBlocks == 0 {
+				// write to hash
+				localBlock := NewBlock(0)
+				block, found := BlockMap[localBlock.Hash()]
+				if found && block.Data == nil {
+					BlockMap[localBlock.Hash()] = localBlock
+				}
+			}
+
+			for i := uint64(0); i < numBlocks; i++ {
+				currentBlockSize := int(math.Min(float64(blockSize), float64(fileSize-int64(i*blockSize))))
+				localBlock := NewBlock(currentBlockSize)
+
+				file.Read(localBlock.Data)
+				block, found := BlockMap[localBlock.Hash()]
+				if found && block.Data == nil {
+					BlockMap[localBlock.Hash()] = localBlock
+				}
+			}
+
+		}
 		for _, blockHash := range remoteFileMeta.BlockHashList {
 			if BlockMap[blockHash].Data != nil {
-				localblock := BlockMap[blockHash]
-				fileBlocks = append(fileBlocks, localblock)
+				localBlock := BlockMap[blockHash]
+				fileBlocks = append(fileBlocks, localBlock)
 			} else {
 				var block Block
 				client.GetBlock(blockHash, &block)
