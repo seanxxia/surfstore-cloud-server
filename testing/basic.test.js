@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { runServer } = require('./libs/server');
-const { waitForServerStart, areBuffersEqual, waitForFileUpload} = require('./libs/utils');
+const { waitForServerStart, areBuffersEqual, waitForFileUpload } = require('./libs/utils');
 
 let server;
 let getClient;
@@ -510,13 +510,13 @@ test('should sync same file with different size (concurrent).', async () => {
 
 test('should sync file with a correct version number and file while concurrently upload file', async () => {
   const serverfile = {
-    'testing.txt': "I am in the server",
-  }
+    'testing.txt': 'I am in the server',
+  };
   const client1 = getClient(serverfile);
   client1.run();
 
   const updatefile = {
-    'testing.txt': Buffer.alloc(1024 * 1024 , '1'),
+    'testing.txt': Buffer.alloc(1024 * 1024, '1'),
   };
   client1.writeFiles({ 'testing.txt': updatefile['testing.txt'] });
   const client2 = getClient();
