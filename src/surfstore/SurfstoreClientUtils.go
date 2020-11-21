@@ -48,11 +48,12 @@ func ClientSync(client RPCClient) {
 				if localFileMeta.Version > remoteFileMeta.Version {
 					isUploadFailed = isUploadFailed || !uploadFile(client, localFileMeta)
 				} else {
-					downloadFileAndUpdateLocalFileMeta(client, localFileMeta, &remoteFileMeta)
+					downloadFile(client, localFileMeta, &remoteFileMeta)
+					*localFileMeta = remoteFileMeta
 				}
 			} else {
-				var localFileMeta FileMetaData
-				downloadFileAndUpdateLocalFileMeta(client, &localFileMeta, &remoteFileMeta)
+				downloadFile(client, nil, &remoteFileMeta)
+				localFileMeta := remoteFileMeta
 				fileMetaMap[remoteFilename] = &localFileMeta
 			}
 		}
@@ -306,73 +307,92 @@ func writeIndexFile(client RPCClient, fileMetaMap map[string]*FileMetaData) {
 	file.Sync()
 }
 
-func downloadFileAndUpdateLocalFileMeta(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta *FileMetaData) {
+func downloadFile(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta *FileMetaData) error {
+	if remoteFileMeta == nil {
+		return nil
+	}
 
-	var fileBlocks []Block
+	if localFileMeta != nil && len(localFileMeta.BlockHashList) == len(remoteFileMeta.BlockHashList) {
+		isHashListEqual := true
+		for i, hash := range localFileMeta.BlockHashList {
+			if hash != remoteFileMeta.BlockHashList[i] {
+				isHashListEqual = false
+				break
+			}
+		}
+
+		if isHashListEqual {
+			return nil
+		}
+	}
+
+	var fileBlocks []*Block
 	if !remoteFileMeta.IsTombstone() {
-		// Get block map for remote
-		BlockMap := make(map[string]Block)
+		// get block map for remote
+		blockMap := make(map[string]*Block)
 		for _, hash := range remoteFileMeta.BlockHashList {
-			var nilBlock Block
-			BlockMap[hash] = nilBlock
+			blockMap[hash] = nil
 		}
+
 		// update map with local blocks with existing files
-		localFileName := localFileMeta.Filename
-		if localFileName != "" && !localFileMeta.IsTombstone() {
+		if localFileMeta != nil && !localFileMeta.IsTombstone() {
+			var fileInfo os.FileInfo
 			file, err := os.Open(filepath.Join(client.BaseDir, localFileMeta.Filename))
-			if err != nil {
-				panic(err)
+			if err == nil {
+				fileInfo, err = file.Stat()
 			}
-			fileInfo, err := file.Stat()
-			if err != nil {
-				panic(err)
-			}
-			// divide into blocks
-			fileSize := fileInfo.Size()
-			blockSize := uint64(client.BlockSize)
-			numBlocks := uint64(math.Ceil(float64(fileSize) / float64(blockSize)))
 
-			// for empty file
-			if numBlocks == 0 {
-				// write to hash
-				localBlock := NewBlock(0)
-				block, found := BlockMap[localBlock.Hash()]
-				if found && block.Data == nil {
-					BlockMap[localBlock.Hash()] = localBlock
+			if err == nil {
+				// successfully access local file
+
+				// divide into blocks
+				fileSize := fileInfo.Size()
+				blockSize := uint64(client.BlockSize)
+				numBlocks := uint64(math.Ceil(float64(fileSize) / float64(blockSize)))
+
+				// for empty file
+				if numBlocks == 0 {
+					// write to hash
+					localBlock := NewBlock(0)
+
+					blockHash := localBlock.Hash()
+					block, found := blockMap[blockHash]
+					if found && block == nil {
+						blockMap[blockHash] = &localBlock
+					}
+				}
+
+				for i := uint64(0); i < numBlocks; i++ {
+					currentBlockSize := int(math.Min(float64(blockSize), float64(fileSize-int64(i*blockSize))))
+					localBlock := NewBlock(currentBlockSize)
+					file.Read(localBlock.Data)
+
+					blockHash := localBlock.Hash()
+					block, found := blockMap[blockHash]
+					if found && block == nil {
+						blockMap[blockHash] = &localBlock
+					}
 				}
 			}
-
-			for i := uint64(0); i < numBlocks; i++ {
-				currentBlockSize := int(math.Min(float64(blockSize), float64(fileSize-int64(i*blockSize))))
-				localBlock := NewBlock(currentBlockSize)
-
-				file.Read(localBlock.Data)
-				block, found := BlockMap[localBlock.Hash()]
-				if found && block.Data == nil {
-					BlockMap[localBlock.Hash()] = localBlock
-				}
-			}
-
 		}
+
 		for _, blockHash := range remoteFileMeta.BlockHashList {
-			if BlockMap[blockHash].Data != nil {
-				localBlock := BlockMap[blockHash]
+			if blockMap[blockHash] != nil {
+				localBlock := blockMap[blockHash]
 				fileBlocks = append(fileBlocks, localBlock)
 			} else {
 				var block Block
 				client.GetBlock(blockHash, &block)
-				fileBlocks = append(fileBlocks, block)
+				fileBlocks = append(fileBlocks, &block)
+				blockMap[blockHash] = &block
 			}
-
 		}
 	}
-	localFileMeta.Filename = remoteFileMeta.Filename
-	localFileMeta.Version = remoteFileMeta.Version
-	localFileMeta.BlockHashList = remoteFileMeta.BlockHashList
-	writeFile(client, localFileMeta, &fileBlocks)
+
+	return writeFile(client, remoteFileMeta, &fileBlocks)
 }
 
-func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]Block) error {
+func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]*Block) error {
 	if fileMeta.IsTombstone() {
 		os.Remove(filepath.Join(client.BaseDir, fileMeta.Filename))
 	} else {
