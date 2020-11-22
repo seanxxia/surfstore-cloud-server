@@ -3,7 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const tmp = require('tmp');
 const shell = require('shelljs');
-const kill = require('kill-port');
+const fkill = require('fkill');
 const mapFiles = require('map-files');
 const { sleep } = require('./utils');
 
@@ -26,8 +26,9 @@ function runServer(blockSize) {
   };
 
   const cleanup = async () => {
-    serverProcess.kill('SIGKILL');
-    await kill(testingConfig['server-port'], 'tcp');
+    await fkill(serverProcess.pid);
+    await fkill(`:${testingConfig['server-port']}`);
+
     for (const client of clients) {
       client.cleanup();
     }
