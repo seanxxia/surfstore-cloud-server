@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "Test automation tool for SurfStore",
   "scripts": {
-    "test": "npm run kill && npx jest testing --config=jest.config.js --runInBand --verbose",
+    "test": "npm run kill -- --silent && npx jest testing --config=jest.config.js --runInBand --verbose",
     "lint": "npx prettier testing/**/*.{js,text.js} --write && npx eslint testing/**/*.{js,text.js} --fix",
-    "kill": "npx fkill-cli -f :8080"
+    "kill": "npx fkill-cli :8080 --force"
   },
   "testing": {
     "server-port": 8080,
