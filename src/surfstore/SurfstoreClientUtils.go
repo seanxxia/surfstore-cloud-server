@@ -100,7 +100,7 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 	if numBlocks == 0 {
 		// for empty file
 		blockBuffer := make([]byte, 0)
-		block := Block{Data: blockBuffer}
+		block := Block{BlockData: blockBuffer, BlockSize: 0}
 
 		succ := false
 		err := client.PutBlock(block, &succ)
@@ -119,7 +119,7 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 			}
 
 			block := NewBlock(currentBlockSize)
-			file.Read(block.Data)
+			file.Read(block.BlockData)
 
 			// write block to server
 			// if there is error -> get block fail -> put block
@@ -293,7 +293,7 @@ func getLocalFileHashBlockListMap(client RPCClient) map[string][]string {
 
 			block := NewBlock(currentBlockSize)
 
-			file.Read(block.Data)
+			file.Read(block.BlockData)
 			blockHashList = append(blockHashList, block.Hash())
 		}
 		localFileMap[fileInfo.Name()] = blockHashList
@@ -393,7 +393,7 @@ func downloadFile(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta 
 						}
 
 						localBlock := NewBlock(currentBlockSize)
-						n, err := file.ReadAt(localBlock.Data, currentBlockOffset)
+						n, err := file.ReadAt(localBlock.BlockData, currentBlockOffset)
 						if n != currentBlockSize {
 							log.Panicln(n, err)
 						}
@@ -431,7 +431,7 @@ func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]*Block) error
 
 		defer file.Close()
 		for _, block := range *blocks {
-			_, err := file.Write(block.Data)
+			_, err := file.Write(block.BlockData)
 			if err != nil {
 				log.Println("writeFile: Failed to write to file:", fileMeta.Filename, err)
 				return err

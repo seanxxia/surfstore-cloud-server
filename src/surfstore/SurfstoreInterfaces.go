@@ -6,20 +6,17 @@ import (
 )
 
 type Block struct {
-	Data []byte
+	BlockData []byte
+	BlockSize int
 }
 
 func NewBlock(size int) Block {
 	buffer := make([]byte, size)
-	return Block{Data: buffer}
+	return Block{BlockData: buffer, BlockSize: size}
 }
 
 func (block *Block) Hash() string {
-	return getBytesHash(&block.Data)
-}
-
-func (block *Block) Size() int {
-	return len(block.Data)
+	return getBytesHash(&block.BlockData)
 }
 
 func getBytesHash(buffer *[]byte) string {
