@@ -23,7 +23,7 @@ for (const blockSize of blockSizes) {
       await server.cleanup();
     });
 
-    test('should sync files (large binary).', async () => {
+    test('should sync files (binary).', async () => {
       const files = {
         'video.mp4': ({ copy }) => {
           // Copy from file in dir "testing/fixture"
@@ -48,6 +48,29 @@ for (const blockSize of blockSizes) {
 
       const expectedFileVersions = {
         'video.mp4': 1,
+        'large.txt': 1,
+      };
+      expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+      expect(client2).toHaveIndexFileVersions(expectedFileVersions);
+    });
+
+    test.skip('should sync large files.', async () => {
+      const files = {
+        'large.txt': Buffer.alloc(1024 * 1024 * 256, 'a'),
+      };
+
+      const client1 = getClient(files);
+      const client2 = getClient();
+
+      client1.run();
+      client2.run();
+
+      expect(client1).toHaveExactLocalFiles(files);
+      expect(client2).toHaveExactLocalFiles(files);
+      expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
+      expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+      const expectedFileVersions = {
         'large.txt': 1,
       };
       expect(client1).toHaveIndexFileVersions(expectedFileVersions);
