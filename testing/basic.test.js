@@ -1,7 +1,12 @@
 const { runServer } = require('./libs/server');
 const { waitForServerStart } = require('./libs/utils');
 
-const blockSizes = [16, 1024, 4096];
+const blockSizes = [
+  1, // spec: at least 1 byte large
+  16,
+  4096,
+  1024 * 1024, // spec: block size of 1 mega byte
+];
 // const blockSizes = [4096];
 
 for (const blockSize of blockSizes) {
@@ -92,7 +97,6 @@ for (const blockSize of blockSizes) {
       expect(client2).toHaveIndexFileVersions(expectedFileVersions);
     });
 
-
     test('should sync files (concurrent).', async () => {
       const files = {
         't1.txt': 'This is test1 test1 test1 test1',
@@ -174,8 +178,8 @@ for (const blockSize of blockSizes) {
 
       expect(client1).toHaveExactLocalFiles(files);
       expect(client2).toHaveExactLocalFiles(files);
-      expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
-      expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+      expect(client1).toHaveIndexFileHashesMatchLocalFileHashes(['t1.txt']);
+      expect(client2).toHaveIndexFileHashesMatchLocalFileHashes(['t1.txt']);
 
       const expectedFileVersions = {
         't1.txt': 2,
@@ -320,8 +324,8 @@ for (const blockSize of blockSizes) {
 
       expect(client1).toHaveExactLocalFiles(files);
       expect(client2).toHaveExactLocalFiles(files);
-      expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
-      expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+      expect(client1).toHaveIndexFileHashesMatchLocalFileHashes(['t1.txt']);
+      expect(client2).toHaveIndexFileHashesMatchLocalFileHashes(['t1.txt']);
       expect(client1).toHaveIndexFileVersions({
         't1.txt': 4,
         't2.txt': 1,
@@ -431,9 +435,9 @@ for (const blockSize of blockSizes) {
       expect(client1).toHaveExactLocalFiles(files);
       expect(client2).toHaveExactLocalFiles(files);
       expect(client3).toHaveExactLocalFiles(files);
-      expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
-      expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
-      expect(client3).toHaveIndexFileHashesMatchLocalFileHashes();
+      expect(client1).toHaveIndexFileHashesMatchLocalFileHashes(['t1.txt']);
+      expect(client2).toHaveIndexFileHashesMatchLocalFileHashes(['t1.txt']);
+      expect(client3).toHaveIndexFileHashesMatchLocalFileHashes(['t1.txt']);
       const expectedFileVersions1 = {
         't1.txt': 3,
         't2.txt': 1,
@@ -453,8 +457,8 @@ for (const blockSize of blockSizes) {
 
       expect(client2).toHaveExactLocalFiles(files3);
       expect(client3).toHaveExactLocalFiles(files3);
-      expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
-      expect(client3).toHaveIndexFileHashesMatchLocalFileHashes();
+      expect(client2).toHaveIndexFileHashesMatchLocalFileHashes(['t2.txt']);
+      expect(client3).toHaveIndexFileHashesMatchLocalFileHashes(['t2.txt']);
       const expectedFileVersions2 = {
         't1.txt': 4,
         't2.txt': 2,

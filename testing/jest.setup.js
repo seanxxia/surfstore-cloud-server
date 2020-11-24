@@ -94,11 +94,35 @@ expect.extend({
     };
   },
 
-  toHaveIndexFileHashesMatchLocalFileHashes(receivedClient) {
+  toHaveIndexFileHashesMatchLocalFileHashes(receivedClient, deletedFiles) {
     const message = receivedClient.isIndexFileHashesMatchLocalFileHashes();
     const pass = message === null;
 
     if (pass) {
+      const index = receivedClient.readIndexFile();
+      const tombstoneRecords = new Set();
+      for (const [fileName, { hashList }] of Object.entries(index)) {
+        if (hashList.length === 1 && hashList[0] === '0') {
+          tombstoneRecords.add(fileName);
+        }
+      }
+      for (const file of deletedFiles ?? []) {
+        if (!tombstoneRecords.has(file)) {
+          return {
+            message: () => `${file} is not recorded deleted in the index file`,
+            pass: false,
+          };
+        }
+        tombstoneRecords.delete(file);
+      }
+
+      if (tombstoneRecords.length > 0) {
+        return {
+          message: () => `Unexpected tombstone records: ${[...tombstoneRecords]}`,
+          pass: false,
+        };
+      }
+
       return {
         message: () => 'Client has index file with hashes math local file hashes',
         pass: true,

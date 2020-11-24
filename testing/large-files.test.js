@@ -2,7 +2,11 @@ const { runServer } = require('./libs/server');
 const { waitForServerStart } = require('./libs/utils');
 
 // const blockSizes = [4096];
-const blockSizes = [4096, 8192];
+const blockSizes = [
+  4096,
+  8192,
+  1024 * 1024, // spec: block size of 1 mega byte
+];
 
 for (const blockSize of blockSizes) {
   describe(`Block size = ${blockSize}`, () => {
