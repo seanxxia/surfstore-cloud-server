@@ -26,8 +26,8 @@ function runServer(blockSize) {
   };
 
   const cleanup = async () => {
-    await fkill(serverProcess.pid);
-    await fkill(`:${testingConfig['server-port']}`);
+    await fkill(serverProcess.pid, { silent: true, force: true });
+    await fkill(`:${testingConfig['server-port']}`, { silent: true, force: true });
 
     for (const client of clients) {
       client.cleanup();
