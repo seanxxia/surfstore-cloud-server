@@ -393,9 +393,9 @@ func downloadFile(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta 
 						}
 
 						localBlock := NewBlock(currentBlockSize)
-						n, err := file.ReadAt(localBlock.BlockData, currentBlockOffset)
-						if n != currentBlockSize {
-							log.Panicln(n, err)
+						readBlockSize, err := file.ReadAt(localBlock.BlockData, currentBlockOffset)
+						if readBlockSize != currentBlockSize || (err != nil && err != io.EOF) {
+							continue
 						}
 						blockMap[localBlockHash] = &localBlock
 					}
