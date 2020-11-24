@@ -55,7 +55,7 @@ for (const blockSize of blockSizes) {
       expect(client2).toHaveIndexFileVersions(expectedFileVersions);
     });
 
-    test.skip('should sync large files (repeated blocks).', async () => {
+    test('should sync large files (repeated blocks).', async () => {
       const files = {
         'large.txt': Buffer.alloc(1024 * 1024 * 256, 'a'),
       };
@@ -78,7 +78,7 @@ for (const blockSize of blockSizes) {
       expect(client2).toHaveIndexFileVersions(expectedFileVersions);
     });
 
-    test.skip('should sync large files (unique blocks).', async () => {
+    test('should sync large files (unique blocks).', async () => {
       const files = {
         'large.txt': crypto.randomBytes(1024 * 1024 * 256),
       };
