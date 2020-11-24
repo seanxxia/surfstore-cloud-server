@@ -44,6 +44,55 @@ for (const blockSize of blockSizes) {
       expect(client2).toHaveIndexFileVersions(expectedFileVersions);
     });
 
+    test('should be case sensitive to filenames', async () => {
+      const files = {
+        't1.txt': 'this is test1 lowercase',
+        'T1.txt': 'THIS IS TEST1 UPPERCASE',
+      };
+
+      const client1 = getClient(files);
+      const client2 = getClient();
+
+      client1.run();
+      client2.run();
+
+      expect(client1).toHaveExactLocalFiles(files);
+      expect(client2).toHaveExactLocalFiles(files);
+      expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
+      expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+      const expectedFileVersions = {
+        't1.txt': 1,
+        'T1.txt': 1,
+      };
+      expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+      expect(client2).toHaveIndexFileVersions(expectedFileVersions);
+    });
+
+    test('should support spaces in filename', async () => {
+      const files = {
+        'test 1 file.txt': 'this is test1 test1',
+      };
+
+      const client1 = getClient(files);
+      const client2 = getClient();
+
+      client1.run();
+      client2.run();
+
+      expect(client1).toHaveExactLocalFiles(files);
+      expect(client2).toHaveExactLocalFiles(files);
+      expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
+      expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+      const expectedFileVersions = {
+        'test 1 file.txt': 1,
+      };
+      expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+      expect(client2).toHaveIndexFileVersions(expectedFileVersions);
+    });
+
+
     test('should sync files (concurrent).', async () => {
       const files = {
         't1.txt': 'This is test1 test1 test1 test1',
