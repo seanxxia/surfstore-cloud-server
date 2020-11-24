@@ -20,6 +20,11 @@ func main() {
 		fmt.Println("Usage: ./run-client host:port baseDir blockSize")
 	}
 
-	rpcClient := surfstore.NewSurfstoreRPCClient(hostPort, baseDir, blockSize)
+	rpcClient, err := surfstore.NewSurfstoreRPCClient(hostPort, baseDir, blockSize)
+	if err != nil {
+		return
+	}
+
 	surfstore.ClientSync(rpcClient)
+	rpcClient.Close()
 }
