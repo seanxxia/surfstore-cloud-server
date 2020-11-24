@@ -143,7 +143,6 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 
 	latestVersion := -1
 	err = client.UpdateFile(fileMeta, &latestVersion)
-	// TODO: Handle the case when latestVersion != fileMeta.Version
 	if err != nil {
 		return false
 	}
