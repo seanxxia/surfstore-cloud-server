@@ -47,13 +47,17 @@ func ClientSync(client RPCClient) {
 				if localFileMeta.Version > remoteFileMeta.Version {
 					isUploadFailed = isUploadFailed || !uploadFile(client, localFileMeta)
 				} else {
-					downloadFile(client, localFileMeta, &remoteFileMeta)
-					*localFileMeta = remoteFileMeta
+					err := downloadFile(client, localFileMeta, &remoteFileMeta)
+					if err == nil {
+						*localFileMeta = remoteFileMeta
+					}
 				}
 			} else {
-				downloadFile(client, nil, &remoteFileMeta)
-				localFileMeta := remoteFileMeta
-				fileMetaMap[remoteFilename] = &localFileMeta
+				err := downloadFile(client, nil, &remoteFileMeta)
+				if err == nil {
+					localFileMeta := remoteFileMeta
+					fileMetaMap[remoteFilename] = &localFileMeta
+				}
 			}
 		}
 
@@ -421,26 +425,24 @@ func downloadFile(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta 
 
 func writeFile(client RPCClient, fileMeta *FileMetaData, blocks *[]*Block) error {
 	if fileMeta.IsTombstone() {
-		os.Remove(filepath.Join(client.BaseDir, fileMeta.Filename))
-	} else {
-		file, err := os.Create(filepath.Join(client.BaseDir, fileMeta.Filename))
-		if err != nil {
-			log.Println("writeFile: Failed to open file:", fileMeta.Filename, err)
-			return err
-		}
-
-		defer file.Close()
-		for _, block := range *blocks {
-			_, err := file.Write(block.BlockData)
-			if err != nil {
-				log.Println("writeFile: Failed to write to file:", fileMeta.Filename, err)
-				return err
-			}
-		}
-		file.Sync()
+		return os.Remove(filepath.Join(client.BaseDir, fileMeta.Filename))
 	}
 
-	return nil
+	file, err := os.Create(filepath.Join(client.BaseDir, fileMeta.Filename))
+	if err != nil {
+		log.Println("writeFile: Failed to open file:", fileMeta.Filename, err)
+		return err
+	}
+
+	defer file.Close()
+	for _, block := range *blocks {
+		_, err := file.Write(block.BlockData)
+		if err != nil {
+			log.Println("writeFile: Failed to write to file:", fileMeta.Filename, err)
+			return err
+		}
+	}
+	return file.Sync()
 }
 
 /*
