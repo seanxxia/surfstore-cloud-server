@@ -139,7 +139,7 @@ for (const blockSize of blockSizes) {
 
     test('should sync same file with different size (concurrent).', async () => {
       const files1 = {
-        'testing.txt': Buffer.alloc(1024 * 512, '1'),
+        'testing.txt': Buffer.alloc(1024 * 1024 * 16, '1'),
       };
 
       const files2 = {
@@ -172,7 +172,7 @@ for (const blockSize of blockSizes) {
       client1.run();
 
       const updatefile = {
-        'testing.txt': Buffer.alloc(1024 * 512, '1'),
+        'testing.txt': Buffer.alloc(1024 * 1024 * 16, '1'),
       };
       client1.writeFiles({ 'testing.txt': updatefile['testing.txt'] });
 
