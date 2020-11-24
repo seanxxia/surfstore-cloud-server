@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { runServer } = require('./libs/server');
 const { waitForServerStart } = require('./libs/utils');
 
@@ -54,9 +55,32 @@ for (const blockSize of blockSizes) {
       expect(client2).toHaveIndexFileVersions(expectedFileVersions);
     });
 
-    test.skip('should sync large files.', async () => {
+    test.skip('should sync large files (repeated blocks).', async () => {
       const files = {
         'large.txt': Buffer.alloc(1024 * 1024 * 256, 'a'),
+      };
+
+      const client1 = getClient(files);
+      const client2 = getClient();
+
+      client1.run();
+      client2.run();
+
+      expect(client1).toHaveExactLocalFiles(files);
+      expect(client2).toHaveExactLocalFiles(files);
+      expect(client1).toHaveIndexFileHashesMatchLocalFileHashes();
+      expect(client2).toHaveIndexFileHashesMatchLocalFileHashes();
+
+      const expectedFileVersions = {
+        'large.txt': 1,
+      };
+      expect(client1).toHaveIndexFileVersions(expectedFileVersions);
+      expect(client2).toHaveIndexFileVersions(expectedFileVersions);
+    });
+
+    test.skip('should sync large files (unique blocks).', async () => {
+      const files = {
+        'large.txt': crypto.randomBytes(1024 * 1024 * 256),
       };
 
       const client1 = getClient(files);
