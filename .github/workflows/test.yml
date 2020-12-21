@@ -45,4 +45,5 @@ jobs:
     - name: Test
       run: |
         cd tester
-        npm run test
+        npm ci
+        npm test
