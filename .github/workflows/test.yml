@@ -41,13 +41,14 @@ jobs:
       run: bash ./build.sh
       
     
-    - name: Install test dependencies
-      run: |
-        cd tester
-        npm install
+#     - name: Install test dependencies
+#       run: |
+#         cd tester
+#         npm install
 
     - name: Test
       run: |
         cd tester
+        npm install
         npm ci
         npm test
