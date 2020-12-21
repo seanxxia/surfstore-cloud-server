@@ -1,6 +1,7 @@
 package surfstore
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -61,15 +62,35 @@ func NewSurfstoreServer() Server {
 }
 
 func ServeSurfstoreServer(hostAddr string, surfstoreServer Server) error {
-	rpc.Register(&surfstoreServer)
+	err := rpc.Register(&surfstoreServer)
+	if err != nil {
+		panic(err)
+	}
 	rpc.HandleHTTP()
 	ln, err := net.Listen("tcp", hostAddr)
 	if err != nil {
 		return err
 	}
 
-	http.Serve(ln, nil)
+	go func() {
+		err := http.Serve(ln, nil)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	// for {
+	// }
 
-	for {
-	}
+	// arith := new(server.Arith)
+	// rpc.Register(arith)
+	// rpc.HandleHTTP()
+	// l, e := net.Listen("tcp", ":8080")
+	// if e != nil {
+	// 	log.Fatal("listen error:", e)
+	// }
+	// go http.Serve(l, nil)
+
+	fmt.Print("Press enter key to end server")
+	fmt.Scanln()
+	return nil
 }

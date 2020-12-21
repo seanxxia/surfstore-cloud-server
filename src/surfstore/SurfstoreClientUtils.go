@@ -82,8 +82,10 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 
 	if fileMeta.IsTombstone() {
 		var latestVersion int
-		client.UpdateFile(fileMeta, &latestVersion)
-
+		err := client.UpdateFile(fileMeta, &latestVersion)
+		if err != nil {
+			return false
+		}
 		return fileMeta.Version == latestVersion
 	}
 
@@ -108,7 +110,7 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 
 		succ := false
 		err := client.PutBlock(block, &succ)
-		if succ == false || err != nil {
+		if !succ || err != nil {
 			log.Println("uploadFile: Failed to put empty block to the server")
 			return false
 		}
@@ -123,17 +125,22 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 			}
 
 			block := NewBlock(currentBlockSize)
-			file.Read(block.BlockData)
-
+			_, err := file.Read(block.BlockData)
+			if err != nil {
+				return false
+			}
 			// write block to server
 			// if there is error -> get block fail -> put block
 			// if the error is nil -> get block succ -> no need
 			succ := false
-			client.HasBlock(block.Hash(), &succ)
+			err = client.HasBlock(block.Hash(), &succ)
+			if err != nil {
+				return false
+			}
 			if !succ {
 				succ := false
 				err := client.PutBlock(block, &succ)
-				if succ == false || err != nil {
+				if !succ || err != nil {
 					log.Println("uploadFile: Failed to put block to server")
 					return false
 				}
@@ -296,7 +303,10 @@ func getLocalFileHashBlockListMap(client RPCClient) map[string][]string {
 
 			block := NewBlock(currentBlockSize)
 
-			file.Read(block.BlockData)
+			_, err := file.Read(block.BlockData)
+			if err != nil {
+				panic("Invalid file read")
+			}
 			blockHashList = append(blockHashList, block.Hash())
 		}
 		localFileMap[fileInfo.Name()] = blockHashList
@@ -327,7 +337,10 @@ func writeIndexFile(client RPCClient, fileMetaMap map[string]*FileMetaData) {
 			panic(err)
 		}
 	}
-	file.Sync()
+	err = file.Sync()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func downloadFile(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta *FileMetaData) error {
@@ -412,7 +425,10 @@ func downloadFile(client RPCClient, localFileMeta *FileMetaData, remoteFileMeta 
 				fileBlocks = append(fileBlocks, localBlock)
 			} else {
 				var block Block
-				client.GetBlock(blockHash, &block)
+				err := client.GetBlock(blockHash, &block)
+				if err != nil {
+					panic(err)
+				}
 				fileBlocks = append(fileBlocks, &block)
 				blockMap[blockHash] = &block
 			}
