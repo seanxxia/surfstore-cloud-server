@@ -110,7 +110,7 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 
 		succ := false
 		err := client.PutBlock(block, &succ)
-		if succ == false || err != nil {
+		if !succ || err != nil {
 			log.Println("uploadFile: Failed to put empty block to the server")
 			return false
 		}
@@ -140,7 +140,7 @@ func uploadFile(client RPCClient, fileMeta *FileMetaData) bool {
 			if !succ {
 				succ := false
 				err := client.PutBlock(block, &succ)
-				if succ == false || err != nil {
+				if !succ || err != nil {
 					log.Println("uploadFile: Failed to put block to server")
 					return false
 				}
