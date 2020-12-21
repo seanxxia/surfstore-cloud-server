@@ -12,10 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout reposistory
-      uses: actions/checkout@main
-    - name: Checkout submodules
-      uses: textbook/git-checkout-submodule-action@main
+    - name: Checkout submodules using a PAT
+      run: |
+          git config --file .gitmodules --get-regexp url | while read url; do
+            git config --file=.gitmodules $(echo "$url" | sed -E "s/git@github.com:|https:\/\/github.com\//https:\/\/${{ secrets.CI_PAT }}:${{ secrets.CI_PAT }}@github.com\//")
+          done
+          git submodule sync
+          git submodule update --init --recursive
       
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
