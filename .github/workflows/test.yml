@@ -5,12 +5,15 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+    
 
 jobs:
 
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+    variables:
+      GIT_SUBMODULE_STRATEGY: recursive
     steps:
 
     - name: Set up Go 1.x
@@ -37,6 +40,7 @@ jobs:
     - name: Build
       run: bash ./build.sh
       
+    
     - name: Install test dependencies
       run: |
         cd tester
