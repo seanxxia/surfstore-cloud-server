@@ -72,7 +72,12 @@ func ServeSurfstoreServer(hostAddr string, surfstoreServer Server) error {
 		return err
 	}
 
-	go http.Serve(ln, nil)
+	go func() {
+		err := http.Serve(ln, nil)
+		if err != nil {
+			panic(err)
+		}
+	}()
 	// for {
 	// }
 
