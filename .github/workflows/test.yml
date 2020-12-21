@@ -5,17 +5,16 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-    
 
 jobs:
-
   build:
     name: Build & Test
     runs-on: ubuntu-latest
-    variables:
-      GIT_SUBMODULE_STRATEGY: recursive
+    
     steps:
-
+    - name: Checkout submodules
+      run: git submodule update --init --recursive
+      
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
