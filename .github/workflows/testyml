@@ -1,0 +1,49 @@
+name: Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.15
+        
+    - name: Set up Node.js 15.x
+      uses: actions/setup-node@v2.1.4
+      with:
+        node-version: 15.x
+      
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+    
+    - name: Show working directory info
+      run: pwd && ls
+
+    - name: Setup environment variables
+      run: |
+        echo "$(pwd)/bin" >> $GITHUB_PATH
+        echo "GOPATH=$(pwd)" >> $GITHUB_ENV
+        
+    - name: Build
+      run: bash ./build.sh
+      
+    - name: Install test dependencies
+      run: |
+        cd tester
+        npm install
+
+    - name: Test
+      run: |
+        cd tester
+        npm ci
+        npm test
