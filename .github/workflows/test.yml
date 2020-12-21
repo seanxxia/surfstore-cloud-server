@@ -41,7 +41,4 @@ jobs:
       run: bash ./build.sh
       
     - name: Test
-      run: |
-        npm install
-        npm ci
-        npm test
+      run: bash ./run-test.sh
