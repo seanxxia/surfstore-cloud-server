@@ -61,14 +61,20 @@ func NewSurfstoreServer() Server {
 }
 
 func ServeSurfstoreServer(hostAddr string, surfstoreServer Server) error {
-	rpc.Register(&surfstoreServer)
+	err := rpc.Register(&surfstoreServer)
+	if err != nil {
+		panic(err)
+	}
 	rpc.HandleHTTP()
 	ln, err := net.Listen("tcp", hostAddr)
 	if err != nil {
 		return err
 	}
 
-	http.Serve(ln, nil)
+	err = http.Serve(ln, nil)
+	if err != nil {
+		panic(err)
+	}
 
 	for {
 	}
