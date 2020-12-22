@@ -12,37 +12,41 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v2
-    - name: Checkout submodules
-      shell: bash
-      run: |
-        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
-        git submodule sync --recursive
-        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+      - name: clone main repository
+        uses: actions/checkout@v2
 
-    - name: Set up Go 1.x
-      uses: actions/setup-go@v2
-      with:
-        go-version: ^1.15
-        
-    - name: Set up Node.js 15.x
-      uses: actions/setup-node@v2.1.4
-      with:
-        node-version: 15.x
-      
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
-    
-    - name: Show working directory info
-      run: pwd && ls
+      - name: clone submodule
+        uses: actions/checkout@v2
+        with:
+          repository: jevancc/cse224-module-3-project-tester
+          path: private-repo
+          ref: v2
+          ssh-key: ${{ secrets.SUBMODULE_SSH_KEY }}
+          persist-credentials: false
 
-    - name: Setup environment variables
-      run: |
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-        echo "GOPATH=$(pwd)" >> $GITHUB_ENV
-        
-    - name: Build
-      run: bash ./build.sh
-      
-    - name: Test
-      run: bash ./run-test.sh
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.15
+
+      - name: Set up Node.js 15.x
+        uses: actions/setup-node@v2.1.4
+        with:
+          node-version: 15.x
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Show working directory info
+        run: pwd && ls
+
+      - name: Setup environment variables
+        run: |
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+          echo "GOPATH=$(pwd)" >> $GITHUB_ENV
+
+      - name: Build
+        run: bash ./build.sh
+
+      - name: Test
+        run: bash ./run-test.sh
