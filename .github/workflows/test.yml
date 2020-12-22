@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.SUMMER_TOKEN }}
 
 #       - uses: actions/checkout@v1 # without submodules
 #       - name: disable the keychain credential helper
