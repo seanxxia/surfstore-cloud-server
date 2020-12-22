@@ -61,7 +61,7 @@ for (const blockSize of blockSizes) {
 
     test('should sync large files (repeated blocks).', async () => {
       const files = {
-        'large.txt': Buffer.alloc(1024 * 1024 * 256, 'a'),
+        'large.txt': Buffer.alloc(1024 * 1024 * 32, 'a'),
       };
 
       const client1 = getClient(files);
@@ -84,7 +84,7 @@ for (const blockSize of blockSizes) {
 
     test('should sync large files (unique blocks).', async () => {
       const files = {
-        'large.txt': crypto.randomBytes(1024 * 1024 * 256),
+        'large.txt': crypto.randomBytes(1024 * 1024 * 32),
       };
 
       const client1 = getClient(files);
