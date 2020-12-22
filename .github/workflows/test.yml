@@ -18,7 +18,7 @@ jobs:
       - name: clone submodule
         uses: actions/checkout@v2
         with:
-          repository: summer110669/tester
+          repository: jevancc/cse224-module-3-project-tester
           path: private-repo
           ref: v2
           ssh-key: ${{ secrets.SUBMODULE_SSH_KEY }}
