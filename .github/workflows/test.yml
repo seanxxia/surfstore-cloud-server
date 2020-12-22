@@ -12,17 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: clone main repository
-        uses: actions/checkout@v2
-
-      - name: clone submodule
+      - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          repository: jevancc/cse224-module-3-project-tester
-          path: private-repo
-          ref: v2
-          ssh-key: ${{ secrets.SUBMODULE_SSH_KEY }}
-          persist-credentials: false
+          submodules: 'true'
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
