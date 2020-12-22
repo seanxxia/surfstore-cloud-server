@@ -12,11 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v2
         with:
-          submodules: 'true'
-          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0
+          submodules: true
+          token: ${{ secrets.PAT }}
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
