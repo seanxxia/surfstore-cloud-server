@@ -7,43 +7,52 @@ on:
     branches: [ main ]
 
 jobs:
-
   build:
     name: Build & Test
     runs-on: ubuntu-latest
-    steps:
-
-    - name: Set up Go 1.x
-      uses: actions/setup-go@v2
-      with:
-        go-version: ^1.15
-        
-    - name: Set up Node.js 15.x
-      uses: actions/setup-node@v2.1.4
-      with:
-        node-version: 15.x
-      
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
     
-    - name: Show working directory info
-      run: pwd && ls
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          submodules: true
+          token: ${{ secrets.SUMMER_TOKEN }}
 
-    - name: Setup environment variables
-      run: |
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-        echo "GOPATH=$(pwd)" >> $GITHUB_ENV
-        
-    - name: Build
-      run: bash ./build.sh
-      
-    - name: Install test dependencies
-      run: |
-        cd tester
-        npm install
+#       - uses: actions/checkout@v1 # without submodules
+#       - name: disable the keychain credential helper
+#         run: git config --global credential.helper ""
+#       - name: enable the local store credential helper
+#         run: git config --global --add credential.helper store
+#       - name: add credential
+#         run: echo "https://x-access-token:${{ secrets.SUBMODULE_CLONE_TOKEN }}@github.com" >> ~/.git-credentials
+#       - name: tell git to use https instead of ssh whenever it encounters it
+#         run: 'git config --global url."https://github.com/".insteadof git@github.com:'
 
-    - name: Test
-      run: |
-        cd tester
-        npm ci
-        npm test
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.15
+
+      - name: Set up Node.js 15.x
+        uses: actions/setup-node@v2.1.4
+        with:
+          node-version: 15.x
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Show working directory info
+        run: pwd && ls
+
+      - name: Setup environment variables
+        run: |
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+          echo "GOPATH=$(pwd)" >> $GITHUB_ENV
+
+      - name: Build
+        run: bash ./build.sh
+
+      - name: Test
+        run: bash ./run-test.sh
