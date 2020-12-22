@@ -1,0 +1,42 @@
+{
+  "name": "cse224-module-3-project-tester",
+  "version": "1.0.0",
+  "description": "Test automation tool for SurfStore",
+  "scripts": {
+    "test": "npm run kill:test && npx jest testing --config=jest.config.js --runInBand --verbose",
+    "test:basic": "npm run kill:test && npx jest testing/basic.test.js --config=jest.config.js --runInBand --verbose",
+    "test:large-files": "npm run kill:test && npx jest testing/large-files.test.js --config=jest.config.js --runInBand --verbose",
+    "lint": "npx prettier testing/**/*.{js,text.js} --write && npx eslint testing/**/*.{js,text.js} --fix",
+    "kill": "npx fkill-cli :8080 --force",
+    "kill:test": "npx fkill-cli :8080 --force --silent"
+  },
+  "testing": {
+    "server-port": 8080,
+    "run-server-cmd": "SurfstoreServerExec",
+    "run-client-cmd": "SurfstoreClientExec localhost:8080 {basedir} {blocksize}"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jevancc/cse224-module-3-project-tester.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jevancc/cse224-module-3-project-tester/issues"
+  },
+  "homepage": "https://github.com/jevancc/cse224-module-3-project-tester#readme",
+  "dependencies": {
+    "cross-env": "^7.0.2",
+    "eslint": "^7.12.1",
+    "eslint-config-google": "^0.14.0",
+    "eslint-config-prettier": "^6.15.0",
+    "fkill": "^7.0.1",
+    "fkill-cli": "^6.0.1",
+    "jest": "^26.6.1",
+    "jest-html-reporters": "^2.1.0",
+    "map-files": "^0.8.2",
+    "prettier": "2.1.2",
+    "shelljs": "^0.8.4",
+    "tmp": "^0.2.1"
+  }
+}
