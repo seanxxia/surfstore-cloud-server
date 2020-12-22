@@ -2,12 +2,16 @@ const crypto = require('crypto');
 const { runServer } = require('./libs/server');
 const { waitForServerStart } = require('./libs/utils');
 
-// const blockSizes = [4096];
-const blockSizes = [
-  4096,
-  8192,
-  1024 * 1024, // spec: block size of 1 mega byte
-];
+let blockSizes;
+if (!process.env.CI) {
+  blockSizes = [
+    4096,
+    8192,
+    1024 * 1024, // spec: block size of 1 mega byte
+  ];
+} else {
+  blockSizes = [4096];
+}
 
 for (const blockSize of blockSizes) {
   describe(`Block size = ${blockSize}`, () => {

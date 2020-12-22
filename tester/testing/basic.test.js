@@ -1,13 +1,17 @@
 const { runServer } = require('./libs/server');
 const { waitForServerStart } = require('./libs/utils');
 
-// const blockSizes = [4096];
-const blockSizes = [
-  1, // spec: at least 1 byte large
-  16,
-  4096,
-  1024 * 1024, // spec: block size of 1 mega byte
-];
+let blockSizes;
+if (!process.env.CI) {
+  blockSizes = [
+    1, // spec: at least 1 byte large
+    16,
+    4096,
+    1024 * 1024, // spec: block size of 1 mega byte
+  ];
+} else {
+  blockSizes = [16, 4096];
+}
 
 for (const blockSize of blockSizes) {
   describe(`Block size = ${blockSize}`, () => {
