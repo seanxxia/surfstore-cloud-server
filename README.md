@@ -1,5 +1,5 @@
 # Surfstore
-https://github.com/summer110669/module-3-project-cse224-chan-xia/workflows/Test/badge.svg)
+https://github.com/summer110669/module-3-project-cse224-chan-xia/workflows/Build%20&%20Test/badge.svg)
 ![Format & Lint](
     https://github.com/summer110669/module-3-project-cse224-chan-xia/workflows/Lint%20&%20Format/badge.svg)
 
