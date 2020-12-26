@@ -1,7 +1,9 @@
 # Surfstore
-https://github.com/summer110669/module-3-project-cse224-chan-xia/workflows/Build%20&%20Test/badge.svg)
+![Build & Test](
+	https://github.com/summer110669/module-3-project-cse224-chan-xia/workflows/Build%20&%20Test/badge.svg)
 ![Format & Lint](
     https://github.com/summer110669/module-3-project-cse224-chan-xia/workflows/Lint%20&%20Format/badge.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 This is the starter code for Module 3: Surfstore.  Before you get started, make
 sure you understand the following 2 things about Go. (These will also be
