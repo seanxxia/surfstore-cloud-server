@@ -5,15 +5,10 @@
     https://github.com/summer110669/module-3-project-cse224-chan-xia/workflows/Lint%20&%20Format/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This is the starter code for Module 3: Surfstore.  Before you get started, make
-sure you understand the following 2 things about Go. (These will also be
-covered in class and in discussions)
+<div align="center"><img width="300" src="./ucsd-logo.png" /></div>
 
-1. Interfaces: They are named collections of method signatures. Here are some good resources to understand interfaces in Go:
-    a. https://gobyexample.com/interfaces
-    b. https://jordanorelli.com/post/32665860244/how-to-use-interfaces-in-go
+An implementation cloud-based file storage service called SurfStore. SurfStore is a networked file storage application that is based on Dropbox, and lets you sync files to and from the “cloud”. 
 
-2. RPC: You should know how to write RPC servers and clients in Go. The [online documentation](https://golang.org/pkg/net/rpc/) of the *rpc* package is a good resource. 
 
 ## Data Types
 
