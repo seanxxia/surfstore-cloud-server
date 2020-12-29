@@ -78,7 +78,6 @@ The test is also available through npm script. With the following command, it wi
 ```
 npm run test
 ```  
-For more information of the testing, jump to [README.md inside the testing folder](testing/README.md).
 
 ## Project Structure
 
