@@ -27,7 +27,7 @@
   "homepage": "https://github.com/summer110669/surfstore-cloud-server#readme",
   "dependencies": {
     "cross-env": "^7.0.3",
-    "eslint": "^7.12.1",
+    "eslint": "^7.31.0",
     "eslint-config-google": "^0.14.0",
     "eslint-config-prettier": "^7.1.0",
     "fkill": "^7.0.1",
